@@ -4,6 +4,9 @@ name = "XBTVEd"
 version = "0.0.1"
 authors = ["Dominick Allen <dominick.allen1989@gmail.com>"]
 
-[dependencies.conrod]
+[[bin]]
 
-git = "https://github.com/PistonDevelopers/conrod"
+name = "XBTVEd"
+
+[dependencies.chrono]
+version = "*"

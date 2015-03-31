@@ -1,6 +1,13 @@
+#![crate_name = "XBTVEd"]
+#![feature(collections)]
 
-extern crate conrod;
+pub mod parse;
+pub mod schedule;
+pub mod tags;
 
-fn main() {
-    println!("Empty for now");
+fn main () {
+    schedule::test();
 }
+
+
+
