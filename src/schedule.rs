@@ -142,7 +142,7 @@ pub fn test() {
     let test1 = 
         "(schedule 
              (program (local \"~/htpc/Videos/fsn.webm\") 
-                 (tags media_type=\" anime\" studio=\"Studio Deen\")
+                 (tags media_type=\" anime\" studio=\"Studio Deen\" airdate=\"2014-11-15\")
                  (instr (play 00:00:01 00:10:00) 
                      (program 
                         ( network \"https://www.youtube.com/watch?v=EiTInQ6R8eM\" 
