@@ -232,7 +232,7 @@ impl FromStr for TagType {
             "photographer" | "Photographer" => Ok(TagType::Photographer),
 
             "year" | "Year" => Ok(TagType::Year),
-            "airdate" | "Airdate" => Ok(TagType::Year),
+            "airdate" | "Airdate" => Ok(TagType::Airdate),
 //            "datetimeutc" | "DateTimeUTC" | "datetimeUTC" => Ok(TagType::DTimeUTC),
 //            "datetimelocal" | "DateTimeLocal" => Ok(TagType::DTLocal),
 
@@ -408,11 +408,14 @@ impl Tags {
                 self.year = Some(year);
             },
             TagType::Airdate => {
-                let ymd_string: Vec<String> = tagdata.split(".").map(|x: &str| x.to_string()).collect();
+                let ymd_string: Vec<String> = tagdata.split("-").map(|x: &str| x.to_string()).collect();
+                for line in ymd_string.iter() {
+                    println!("{}", line);
+                };
                 if ymd_string.len() != 3 || ymd_string[0].len() != 4 || ymd_string[1].len() != 2 
                     || ymd_string[2].len() != 2
                 {
-                    return Err(BadToken("Input dates as yyyy.mm.dd".to_string()))
+                    return Err(BadToken("Input dates as yyyy-mm-dd".to_string()))
                 }
 
                 let year = match ymd_string[0].parse::<i32>() {
