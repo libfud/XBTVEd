@@ -84,9 +84,18 @@ impl Iterator for BlockIterator {
                     }
                 }}, self.sched_num + 1);
             
-            let queue: Vec<String> = self.entries.iter().zip(self.repeat.iter()).map(|(&entry, &repeater)| {
-                    entry.iter().skip(self.sched_num * repeater).take(repeater).map(|w| w.clone())
-            }).collect();
+            let queue: Vec<String> = self.entries.iter().zip(self.repeat.iter())
+                .map(|(ref entry, &repeater)| {
+                    entry.iter().skip(self.sched_num * repeater)
+                        .take(repeater).map(|w| w.clone()).collect::<Vec<String>>()
+                }).fold(Vec::new(), |mut sched, mut entry| {
+                sched.append(&mut entry);
+                sched
+            });
+/*            let proglist: Vec<String> = queue.into_iter().fold(Vec::new(), |mut sched, mut entry| {
+                sched.append(&mut entry);
+                sched
+            });*/
             None
         }
     }
