@@ -409,9 +409,6 @@ impl Tags {
             },
             TagType::Airdate => {
                 let ymd_string: Vec<String> = tagdata.split("-").map(|x: &str| x.to_string()).collect();
-                for line in ymd_string.iter() {
-                    println!("{}", line);
-                };
                 if ymd_string.len() != 3 || ymd_string[0].len() != 4 || ymd_string[1].len() != 2 
                     || ymd_string[2].len() != 2
                 {

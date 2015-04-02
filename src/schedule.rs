@@ -1,18 +1,70 @@
 use std::fmt;
 use super::tags::Tags;
 
-pub type Schedule = Vec<Program>;
+#[derive(Clone, PartialEq, Debug)]
+pub struct Schedule {
+    programs: Vec<Program>,
+    name: String
+}
 
 impl fmt::Display for Schedule {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "(schedule "));
-        for program in self.iter() {
+        try!(write!(fmt, "(schedule \"{}\" ", self.name));
+        for program in self.programs.iter() {
             try!(write!(fmt, "{}", program));
         }
         try!(write!(fmt, ")"));
         Ok(())
     }
 }
+
+impl<'a> Schedule {
+    pub fn new(nom: String, progs: Vec<Program>) -> Schedule {
+        Schedule { name: nom, programs: progs }
+    }
+
+    pub fn change_name(&mut self, nom: String) {
+        self.name = nom;
+    }
+
+    pub fn name(&self) -> String {
+        self.name.clone()
+    }
+    
+    pub fn programs(&self) -> Vec<Program> {
+        self.programs.clone()
+    }
+
+    pub fn add_program(&mut self, prog: Program) {
+        self.programs.push(prog);
+    }
+
+    pub fn pop_program(&mut self) -> Option<Program> {
+        self.programs.pop()
+    }
+
+    pub fn del_program(&mut self, idx: usize) -> Result<(), String> {
+        if idx > self.programs.len() - 1 {
+            Err("Index is out of bounds.".to_string())
+        } else {
+            self.programs.remove(idx);
+            Ok(())
+        }
+    }
+
+    pub fn ins_program(&mut self, idx: usize, prog: Program) -> Result<(), String> {
+        if idx > self.programs.len() - 1 {
+            Err("Index is out of bounds.".to_string())
+        } else {
+            self.programs.insert(idx, prog);
+            Ok(())
+        }
+    }
+
+    pub fn modify_program(&'a mut self, idx: usize) -> Option<&'a mut Program> {
+        self.programs.get_mut(idx)
+    }
+}   
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Source {
@@ -140,7 +192,7 @@ impl Program {
 
 pub fn test() {
     let test1 = 
-        "(schedule 
+        "(schedule \"test1\"
              (program (local \"~/htpc/Videos/fsn.webm\") 
                  (tags media_type=\" anime\" studio=\"Studio Deen\" airdate=\"2014-11-15\")
                  (instr (play 00:00:01 00:10:00) 
@@ -180,7 +232,7 @@ pub fn test() {
 
     assert_eq!(test2,test4);
 
-    test4.get_mut(0).unwrap().tags.director=Some("John Wayne".to_string());
+    test4.modify_program(0).unwrap().tags.director=Some("John Wayne".to_string());
 
     println!("{}", test4);
 

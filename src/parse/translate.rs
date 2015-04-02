@@ -141,16 +141,21 @@ pub fn add_program(tokens: &mut TokenStream<Token, ParseError>) -> Result<Progra
 
 pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
     try!(begin_expr(tokens));
-    let mut sched: Vec<Program> = match try!(strip(tokens.next())) {
+    let mut progs: Vec<Program> = match try!(strip(tokens.next())) {
         Sched => Vec::new(),
         _ => return Err(BadAction)
+    };
+
+    let name = match try!(strip(tokens.next())) {
+        Location(x) => x,
+        x => return Err(BadToken(format!("{}{}", "Expected name but found ", x)))
     };
 
     loop {
         match tokens.next() {
             Some(Ok(LParen)) => continue,
             Some(Ok(Prog)) => {
-                sched.push(try!(add_program(tokens)));
+                progs.push(try!(add_program(tokens)));
             },
             Some(Ok(RParen)) => match tokens.next() {
                 None => break,
@@ -166,5 +171,5 @@ pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
             None => break
         }
     }
-    Ok(sched)
+    Ok(Schedule::new(name, progs))
 }

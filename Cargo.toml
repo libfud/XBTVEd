@@ -10,3 +10,7 @@ name = "XBTVEd"
 
 [dependencies.chrono]
 version = "*"
+
+[dependencies.rgtk]
+git = "https://github.com/jeremyletang/rgtk.git"
+features = ["GTK_3_12"]
