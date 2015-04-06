@@ -171,5 +171,5 @@ pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
             None => break
         }
     }
-    Ok(Schedule::new(name, progs))
+    Ok(Schedule::new(&name, progs))
 }

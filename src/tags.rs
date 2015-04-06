@@ -120,7 +120,7 @@ impl FromStr for MediaType {
 
 impl fmt::Display for MediaType {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "{}", match *self {
+        try!(write!(fmt, "{} ", match *self {
             MediaType::Video(ref x) => x.to_string(),
             MediaType::Audio(ref x) => x.to_string(),
             MediaType::Image => "Image".to_string()
@@ -507,7 +507,7 @@ macro_rules! opt_display {
 
 macro_rules! opt_display_vec {
     ($fmt: ident, $self_: ident, $field:ident, $tag:expr) => (match $self_.$field {
-        Some(ref val) => { try!(write!($fmt, "{}", format!("{}= \"", $tag)));
+        Some(ref val) => { try!(write!($fmt, "{}", format!("{}= \" ", $tag)));
                            for member in val.iter() {
                                try!(write!($fmt, "{}", member.clone()));
                            }

@@ -9,7 +9,7 @@ pub struct Schedule {
 
 impl fmt::Display for Schedule {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "(schedule \"{}\" ", self.name));
+        try!(writeln!(fmt, "(schedule \"{}\" ", self.name));
         for program in self.programs.iter() {
             try!(write!(fmt, "{}", program));
         }
@@ -19,8 +19,8 @@ impl fmt::Display for Schedule {
 }
 
 impl<'a> Schedule {
-    pub fn new(nom: String, progs: Vec<Program>) -> Schedule {
-        Schedule { name: nom, programs: progs }
+    pub fn new(nom: &str, progs: Vec<Program>) -> Schedule {
+        Schedule { name: nom.to_string(), programs: progs }
     }
 
     pub fn change_name(&mut self, nom: String) {
@@ -150,17 +150,6 @@ impl fmt::Display for Instruction {
     }
 }
 
-impl fmt::Display for Vec<Instruction> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "(instr "));
-        for instr in self.iter() {
-            try!(write!(fmt, "{}", format!("{} ",instr)));
-        }
-        try!(write!(fmt, " )"));
-        Ok(())
-    }
-}
-
 #[derive(Clone, PartialEq, Debug)]
 pub struct Program {
     location: Source,
@@ -174,8 +163,12 @@ impl fmt::Display for Program {
             Source::Pathname(ref x) => format!("local \"{}\")", x),
             Source::URL(ref x) => format!("network \"{}\")", x)
         }));
-        try!(write!(fmt, "{}", self.tags));
-        try!(write!(fmt, "{})", self.instructions));
+        try!(writeln!(fmt, "{}", self.tags));
+        try!(writeln!(fmt, "(instr "));
+        for instr in self.instructions.iter() {
+            try!(writeln!(fmt, "{}", format!("{}",instr)));
+        }
+        try!(writeln!(fmt, "))"));
         Ok(())
     }
 }
@@ -208,7 +201,7 @@ pub fn test() {
                       (tags artist=\"Gorillaz\") (instr (play )))
          )";
     println!("{}", test1);
-    let test2 = match super::parse::parse(test1) {
+    let mut test2 = match super::parse::parse(test1) {
         Ok(res) => { 
             println!("{}", res);
             res
@@ -218,7 +211,8 @@ pub fn test() {
             return
         }
     };
-    
+
+    test2.change_name("test2".to_string());
 
     let test3 = test2.to_string();
     println!("{}", test3);
