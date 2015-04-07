@@ -14,9 +14,10 @@ pub mod tags;
 pub mod blocks;
 pub mod gui;
 
-fn main () {
-    schedule::test();
+#[cfg(test)]
+mod test;
 
+fn main () {
     let (window, mut gl, mut ui) = make_window("XBTVEd", 800, 600);
     let window_ref = Rc::new(RefCell::new(window));
     let mut xbtved = XBTVEd::new();
