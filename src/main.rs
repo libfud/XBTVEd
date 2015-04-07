@@ -92,28 +92,36 @@ impl XBTVEd {
     }
 }
 
-pub fn add_schedule() -> Option<Schedule> {
+pub fn make_window(title: &str, width: u32, height: u32) -> (GlutinWindow, GlGraphics, Ui<GlyphCache>) {
     let opengl = OpenGL::_3_2;
     let window = GlutinWindow::new(
         opengl,
         WindowSettings::new(
-            "Add Schedule".to_string(), 
-            Size { width: 600, height: 200 }
+            title.to_string(), 
+            Size { width: width, height: height }
             ).exit_on_esc(true).samples(4));
-    
-    let window_ref = Rc::new(RefCell::new(window));
-    let mut gl = GlGraphics::new(opengl);
+    let gl = GlGraphics::new(opengl);
 
     let font_path = Path::new("./assets/NotoSans-Regular.ttf");
     let theme = Theme::default();
     let glyph_cache = GlyphCache::new(&font_path).unwrap();
-    let mut ui = Ui::<GlyphCache>::new(glyph_cache, theme);
+    let ui = Ui::<GlyphCache>::new(glyph_cache, theme);
+
+    (window, gl, ui)
+}
+    
+
+pub fn add_schedule() -> Option<Schedule> {
+    let (window, mut gl, mut ui) = make_window("Add Schedule", 600, 200);
+    let window_ref = Rc::new(RefCell::new(window));
 
     let light_bg = Color::new(0.8, 0.8, 0.8, 1.0);
 
     let ref mut sched_name = "name".to_string();
 
     for event in Events::new(window_ref).ups(180).max_fps(60) {
+        let (mut clicked, mut val) = (false, None);
+
         ui.handle_event(&event);
         if let Event::Render(args) = event {
             gl.draw([0, 0, args.width as i32, args.height as i32], |_, gl| {
@@ -142,8 +150,10 @@ pub fn add_schedule() -> Option<Schedule> {
                         let tags = Tags::new();
                         let instrs = vec!(Instruction::Play(0, 0));
                         let program = Program::new(Source::Pathname("foo".to_string()), tags, instrs);
-                        return Some(Schedule::new(&sched_name, vec!(program)))
-                    });
+
+                        clicked = true;
+                        val = Some(Schedule::new(&sched_name, vec!(program)));
+                    }).draw(&mut ui, gl);
 
                 Button::new(2)
                     .dimensions(50.0, 60.0)
@@ -151,9 +161,16 @@ pub fn add_schedule() -> Option<Schedule> {
                     .rgba(0.25, 0.25, 0.25, 1.0)
                     .frame(1.0)
                     .label("Cancel")
-                    .callback(|| { return None });
+                    .callback(|| { 
+                        clicked = true;
+                        val = None;
+                    }).draw(&mut ui, gl);
 
             });
+        }
+
+        if clicked {
+            return val
         }
     }
 
@@ -200,21 +217,23 @@ pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd
 fn main () {
     schedule::test();
 
-    let opengl = OpenGL::_3_2;
-    let window = GlutinWindow::new(
-        opengl,
-        WindowSettings::new(
-            "XBTVEd".to_string(), 
-            Size { width: 800, height: 600 }
-        ).exit_on_esc(true).samples(4));
+    let (window, mut gl, mut ui) = make_window("XBTVEd", 800, 600);
+
+//    let opengl = OpenGL::_3_2;
+//    let window = GlutinWindow::new(
+//        opengl,
+//        WindowSettings::new(
+//            "XBTVEd".to_string(), 
+//            Size { width: 800, height: 600 }
+//        ).exit_on_esc(true).samples(4));
     
     let window_ref = Rc::new(RefCell::new(window));
-    let mut gl = GlGraphics::new(opengl);
+//    let mut gl = GlGraphics::new(opengl);
 
-    let font_path = Path::new("./assets/NotoSans-Regular.ttf");
-    let theme = Theme::default();
-    let glyph_cache = GlyphCache::new(&font_path).unwrap();
-    let mut ui = Ui::<GlyphCache>::new(glyph_cache, theme);
+//    let font_path = Path::new("./assets/NotoSans-Regular.ttf");
+//    let theme = Theme::default();
+//    let glyph_cache = GlyphCache::new(&font_path).unwrap();
+//    let mut ui = Ui::<GlyphCache>::new(glyph_cache, theme);
     let mut xbtved = XBTVEd::new();
     
     for event in Events::new(window_ref).ups(180).max_fps(60) {
