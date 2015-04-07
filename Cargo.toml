@@ -9,8 +9,16 @@ authors = ["Dominick Allen <dominick.allen1989@gmail.com>"]
 name = "XBTVEd"
 
 [dependencies.chrono]
-version = "*"
+version = "0.2.10"
 
-[dependencies.rgtk]
-git = "https://github.com/jeremyletang/rgtk.git"
-features = ["GTK_3_12"]
+[dependencies.conrod]
+git = "https://github.com/PistonDevelopers/conrod.git"
+
+[dependencies.piston]
+git = "https://github.com/PistonDevelopers/piston.git"
+
+[dependencies.pistoncore-glutin_window]
+git = "https://github.com/PistonDevelopers/glutin_window.git"
+
+[dependencies.piston2d-opengl_graphics]
+git = "https://github.com/PistonDevelopers/opengl_graphics.git"

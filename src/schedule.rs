@@ -190,7 +190,7 @@ pub fn test() {
                  (tags media_type=\" anime\" studio=\"Studio Deen\" airdate=\"2014-11-15\")
                  (instr (play 00:00:01 00:10:00) 
                      (program 
-                        ( network \"https://www.youtube.com/watch?v=EiTInQ6R8eM\" 
+                        ( network \"https://www.youtube.com/watch?v=foo\" 
                         )
                         (tags ) (instr (play 00:01:00))
                      )

@@ -6,8 +6,23 @@ extern crate piston;
 extern crate opengl_graphics;
 extern crate glutin_window;
 
-use conrod::{Background, Button, Callable, Color, Colorable, Drawable, 
-             Frameable, Label, Labelable, Positionable, Shapeable, Theme, Ui};
+use conrod::{Background, 
+             Button, 
+             Callable, 
+             Color, 
+             Colorable, 
+             Drawable, 
+             Frameable, 
+             Label, 
+             Labelable, 
+             Point, 
+             Positionable, 
+             Shapeable, 
+             TextBox, 
+             Theme, 
+             Ui,
+             WidgetMatrix
+};
 use opengl_graphics::{GlGraphics, OpenGL};
 use opengl_graphics::glyph_cache::GlyphCache;
 use glutin_window::GlutinWindow;
@@ -28,7 +43,7 @@ pub mod tags;
 pub mod blocks;
 
 pub struct XBTVEd {
-    schedules: Vec<Schedule>,
+    pub schedules: Vec<Schedule>,
     bg_color: Color,
     frame_width: f64,
     current_schedule: usize
@@ -47,23 +62,44 @@ impl XBTVEd {
         }
     }
 
-    pub fn add_schedule(&mut self, sched: &Schedule) {
-        self.schedules.push(sched.clone());
-    }
-
     pub fn get_schedule<'a>(&'a self, idx: usize) -> Option<&'a Schedule> {
         self.schedules.get(idx)
-    }        
+    }
+
+    pub fn prev_schedule(&mut self) {
+        if self.current_schedule == 0 {
+            ()
+        } else {
+            self.current_schedule -= 1
+        }
+    }
+
+    pub fn next_schedule(&mut self) {
+        if self.current_schedule + 1 == self.schedules.len() {
+            ()
+        } else {
+            self.current_schedule += 1
+        }
+    }
+
+    pub fn change_current_schedule(&mut self, idx: usize) -> Result<(), String> {
+        if idx >= self.schedules.len() {
+            Err("Out of bounds".to_string())
+        } else {
+            self.current_schedule = idx;
+            Ok(())
+        }
+    }
 }
 
-pub fn add_schedule() -> Schedule {
+pub fn add_schedule() -> Option<Schedule> {
     let opengl = OpenGL::_3_2;
     let window = GlutinWindow::new(
         opengl,
         WindowSettings::new(
-            "Add Program".to_string(), 
+            "Add Schedule".to_string(), 
             Size { width: 600, height: 200 }
-        ).exit_on_esc(true).samples(4));
+            ).exit_on_esc(true).samples(4));
     
     let window_ref = Rc::new(RefCell::new(window));
     let mut gl = GlGraphics::new(opengl);
@@ -73,34 +109,92 @@ pub fn add_schedule() -> Schedule {
     let glyph_cache = GlyphCache::new(&font_path).unwrap();
     let mut ui = Ui::<GlyphCache>::new(glyph_cache, theme);
 
+    let light_bg = Color::new(0.8, 0.8, 0.8, 1.0);
+
+    let ref mut sched_name = "name".to_string();
+
     for event in Events::new(window_ref).ups(180).max_fps(60) {
         ui.handle_event(&event);
         if let Event::Render(args) = event {
             gl.draw([0, 0, args.width as i32, args.height as i32], |_, gl| {
-                Background::new().color(Color::new(0.8, 0.8, 0.8, 1.0)).draw(&mut ui, gl);
+                Background::new().color(light_bg.clone()).draw(&mut ui, gl);
+
+                Label::new("Schedule Name").position(5.0, 10.0)
+                    .size(18).color(light_bg.plain_contrast()).draw(&mut ui, gl);
+
+                TextBox::new(0, sched_name)
+                    .font_size(14)
+                    .dimensions(100.0, 20.0)
+                    .position(5.0, 35.0)
+                    .frame(1.0)
+                    .frame_color(light_bg.invert().plain_contrast())
+                    .color(light_bg.clone())
+                    .callback(|_string: &mut String| {})
+                    .draw(&mut ui, gl);
+
+                Button::new(1)
+                    .dimensions(50.0, 60.0)
+                    .position(5.0, 100.0)
+                    .rgba(0.25, 0.25, 0.25, 1.0)
+                    .frame(1.0)
+                    .label("Ok")
+                    .callback(|| {
+                        let tags = Tags::new();
+                        let instrs = vec!(Instruction::Play(0, 0));
+                        let program = Program::new(Source::Pathname("foo".to_string()), tags, instrs);
+                        return Some(Schedule::new(&sched_name, vec!(program)))
+                    });
+
+                Button::new(2)
+                    .dimensions(50.0, 60.0)
+                    .position(60.0, 100.0)
+                    .rgba(0.25, 0.25, 0.25, 1.0)
+                    .frame(1.0)
+                    .label("Cancel")
+                    .callback(|| { return None });
+
             });
         }
     }
 
-    Schedule::new("New Schedule", 
-                  vec!(Program::new(Source::Pathname("foo".to_string()),
-                                    Tags::new(),
-                                    vec!(Instruction::Play(0, 0)))))
+    None
 }
 
 pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd) {
+    let add_sched_uiid = 10;
+    let buff_display_uiid = 144;
+    
+    let ref mut buffer = xbtved.get_schedule(xbtved.current_schedule).unwrap().to_string();
+
     Background::new().color(xbtved.bg_color).draw(ui, gl);
     
-    Button::new(0).dimensions(200.0, 60.0).position(50.0, 50.0).rgba(0.25, 0.25, 0.25, 1.0)
-        .frame(xbtved.frame_width).label("Add Schedule")
+    Button::new(add_sched_uiid)
+        .dimensions(200.0, 60.0)
+        .position(50.0, 50.0)
+        .rgba(0.25, 0.25, 0.25, 1.0)
+        .frame(xbtved.frame_width)
+        .label("Add Schedule")
         .callback(|| {
             let (tx, rx) = channel();
             thread::spawn(move || {
                           tx.send(add_schedule()).unwrap();
                           });
-            xbtved.add_schedule(&rx.recv().unwrap());
+            if let Some(sched) = rx.recv().unwrap() {
+                xbtved.schedules.push(sched)
+            };
             println!("{}", xbtved.get_schedule(1).unwrap());
         }).draw(ui, gl);
+
+    TextBox::new(buff_display_uiid, buffer)
+        .font_size(16)
+        .dimensions(500.0, 400.0)
+        .position(50.0, 120.0)
+        .frame(1.0)
+        .frame_color(xbtved.bg_color.invert().plain_contrast())
+        .color(xbtved.bg_color.invert())
+        .callback(|_string: &mut String| {})
+        .draw(ui, gl);
+        
 }
 
 fn main () {
