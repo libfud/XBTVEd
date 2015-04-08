@@ -20,6 +20,7 @@ use self::conrod::{
     Ui,
     WidgetMatrix,
 };
+
 use self::opengl_graphics::{GlGraphics, OpenGL};
 use self::opengl_graphics::glyph_cache::GlyphCache;
 use self::glutin_window::GlutinWindow;
@@ -40,7 +41,7 @@ pub struct XBTVEd {
     current_schedule: usize
 }
 
-impl XBTVEd {
+impl<'a> XBTVEd {
     pub fn new() -> XBTVEd {
         let loc = Source::Pathname("foo".to_string());
         let tags = Tags::new();
@@ -53,7 +54,11 @@ impl XBTVEd {
         }
     }
 
-    pub fn get_schedule<'a>(&'a self, idx: usize) -> Option<&'a Schedule> {
+    pub fn get_schedule(&'a self) -> &'a Schedule {
+        self.schedules.get(self.current_schedule).unwrap()
+    }
+
+    pub fn get_schedule_at(&'a self, idx: usize) -> Option<&'a Schedule> {
         self.schedules.get(idx)
     }
 
@@ -82,6 +87,10 @@ impl XBTVEd {
         }
     }
 
+    pub fn modify_current_schedule(&mut self) -> &mut Schedule {
+        self.schedules.get_mut(self.current_schedule).unwrap()
+    }
+
     pub fn remove_schedule(&mut self, idx: usize) -> Result<(), String> {
         if idx >= self.schedules.len() {
             Err("Out of bounds".to_string())
@@ -96,6 +105,9 @@ impl XBTVEd {
             self.schedules.push(Schedule::new("Example", progs));
             Ok(())
         } else {
+            if idx + 1 == self.schedules.len() {
+                self.current_schedule -= 1;
+            }
             self.schedules.remove(idx);
             Ok(())
         }
@@ -232,13 +244,13 @@ pub fn confirm(msg: &str) -> bool {
     }
 }    
 
-pub fn add_schedule() -> Option<Schedule> {
+pub fn get_input() -> Option<String> {
     let (window, mut gl, mut ui) = make_window("Add Schedule", 600, 200);
     let window_ref = Rc::new(RefCell::new(window));
 
     let light_bg = Color::new(0.8, 0.8, 0.8, 1.0);
     let (mut clicked, mut val) = (false, None);
-    let ref mut sched_name = "name".to_string();
+    let ref mut sched_name = "".to_string();
 
     for event in Events::new(window_ref).ups(180).max_fps(60) {
         ui.handle_event(&event);
@@ -267,14 +279,10 @@ pub fn add_schedule() -> Option<Schedule> {
                     .label("Ok")
                     .callback(|| {
                         if sched_name.len() == 0 {
-                            pop_up_msg("Please give a name for the schedule.")
+                            pop_up_msg("Please enter a string.")
                         } else { 
-                            let tags = Tags::new();
-                            let instrs = vec!(Instruction::Play(0, 0));
-                            let program = Program::new(Source::Pathname("foo".to_string()), tags, instrs);
-
                             clicked = true;
-                            val = Some(Schedule::new(&sched_name, vec!(program)));
+                            val = Some(sched_name.clone());
                         }
                     }).draw(&mut ui, gl);
 
@@ -305,29 +313,33 @@ pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd
     let next_sched_uiid = 3;
     let buff_display_uiid = 4;
     let del_sched_uiid = 16543;
-    let ref mut buffer = xbtved.get_schedule(xbtved.current_schedule).unwrap().to_string();
+//    let ref mut buffer = xbtved.get_schedule(xbtved.current_schedule).unwrap().to_string();
 
     Background::new().color(xbtved.bg_color).draw(ui, gl);
     
     Button::new(add_sched_uiid)
         .dimensions(200.0, 40.0)
-        .position(50.0, 50.0)
+        .position(10.0, 50.0)
         .color(xbtved.bg_color.plain_contrast())
         .frame(1.0)
         .label("Add New Schedule")
         .callback(|| {
             let (tx, rx) = channel();
             thread::spawn(move || {
-                          tx.send(add_schedule()).unwrap();
+                          tx.send(get_input()).unwrap();
                           });
-            if let Ok(Some(sched)) = rx.recv() {
-                xbtved.push_schedule(sched)
+            if let Ok(Some(sched_name)) = rx.recv() {
+                let tags = Tags::new();
+                let instrs = vec!(Instruction::Play(0, 0));
+                let program = Program::new(Source::Pathname("foo".to_string()), tags, instrs);
+
+                xbtved.push_schedule(Schedule::new(&sched_name, vec!(program)))
             };
         }).draw(ui, gl);
 
     Button::new(prev_sched_uiid)
         .dimensions(200.0, 40.0)
-        .position(260.0, 50.0)
+        .position(220.0, 50.0)
         .color(xbtved.bg_color.plain_contrast())
         .frame(1.0)
         .label("Previous Schedule")
@@ -337,7 +349,7 @@ pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd
 
     Button::new(next_sched_uiid)
         .dimensions(200.0, 40.0)
-        .position(480.0, 50.0)
+        .position(430.0, 50.0)
         .color(xbtved.bg_color.plain_contrast())
         .frame(1.0)
         .label("Next Schedule")
@@ -345,43 +357,15 @@ pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd
             xbtved.next_schedule();
         }).draw(ui, gl);
 
-    WidgetMatrix::new(xbtved.schedules.len(), 1)
-        .dimensions(780.0, 40.0)
-        .position(10.0, 100.0)
-        .each_widget(|num, _col, _row, pos, dim| {
-            Button::new(5 + num as u64)
-                .dim(dim)
-                .point(pos)
-                .color(xbtved.bg_color.plain_contrast())
-                .frame(1.0)
-                .label(&xbtved.get_schedule(num).unwrap().name())
-                .callback(|| {
-                    match xbtved.change_current_schedule(num) {
-                        Ok(_) => {},
-                        Err(f) => pop_up_msg(&f)
-                    };
-                }).draw(ui, gl);
-        });
-
-    TextBox::new(buff_display_uiid, buffer)
-        .font_size(16)
-        .dimensions(780.0, 100.0)
-        .position(10.0, 150.0)
-        .frame(1.0)
-        .frame_color(xbtved.bg_color.invert().plain_contrast())
-        .color(xbtved.bg_color.invert())
-        .callback(|_string: &mut String| {})
-        .draw(ui, gl);
-
     Button::new(del_sched_uiid)
         .dimensions(200.0, 40.0)
-        .position(10.0, 260.0)
+        .position(640.0, 50.0)
         .frame(1.0)
         .color(xbtved.bg_color.plain_contrast())
         .label("Delete Schedule")
         .callback(|| {
             let msg = format!("Do you really want to delete schedule {}?",
-                              xbtved.get_schedule(xbtved.current_schedule).unwrap().name());
+                              xbtved.get_schedule().name());
             if confirm(&msg) {
                 let idx = xbtved.current_schedule;
                 match xbtved.remove_schedule(idx) {
@@ -390,4 +374,96 @@ pub fn draw_ui(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache>, xbtved: &mut XBTVEd
                 }
             }
         }).draw(ui, gl);
+
+    WidgetMatrix::new(xbtved.schedules.len(), 1)
+        .dimensions(820.0, 40.0)
+        .position(10.0, 100.0)
+        .each_widget(|num, _col, _row, pos, dim| {
+            Button::new(5 + num as u64)
+                .dim(dim)
+                .point(pos)
+                .color(xbtved.bg_color.plain_contrast())
+                .frame(1.0)
+                .label(&xbtved.get_schedule_at(num).unwrap().name())
+                .callback(|| {
+                    match xbtved.change_current_schedule(num) {
+                        Ok(_) => {},
+                        Err(f) => pop_up_msg(&f)
+                    };
+                }).draw(ui, gl);
+        });
+
+//    let sched = xbtved.get_schedule();
+    let mut sched_name = xbtved.get_schedule().name();
+
+    TextBox::new(buff_display_uiid, &mut sched_name)
+        .font_size(16)
+        .dimensions(150.0, 30.0)
+        .position(10.0, 145.0)
+        .frame(1.0)
+        .frame_color(xbtved.bg_color.invert().plain_contrast())
+        .rgba(0.4, 0.1, 0.1, 1.0)
+        .callback(|_string: &mut String| {})
+        .draw(ui, gl); 
+
+    WidgetMatrix::new(xbtved.get_schedule().programs_len(), 1)
+        .dimensions(670.0, 30.0)
+        .position(160.0, 145.0)
+        .each_widget(|num, _col, _row, pos, dim| {
+            let mut text = match xbtved.get_schedule().program_ref(num) {
+                Some(prog) => prog.get_location().to_string(),
+                None => "Whoops".to_string()
+            };
+            TextBox::new(1000 + num as u64, &mut text)
+                .dim(dim)
+                .point(pos)
+                .rgba(0.1, 0.1, 0.4, 1.0)
+                .frame(1.0)
+                .callback(|_string: &mut String| {})
+                .draw(ui, gl);
+        });
+
+
+    Button::new(8111)
+        .dimensions(150.0, 40.0)
+        .position(10.0, 180.0)
+        .frame(1.0)
+        .color(xbtved.bg_color.plain_contrast())
+        .label("Change Name")
+        .callback(|| {
+            let (tx, rx) = channel();
+            thread::spawn(move || {
+                          tx.send(get_input()).unwrap();
+                          });
+            if let Ok(Some(new_name)) = rx.recv() {
+                xbtved.modify_current_schedule().change_name(new_name);
+            }
+        }).draw(ui, gl);
+
+    Button::new(8381)
+        .dimensions(150.0, 40.0)
+        .position(10.0, 180.0)
+        .frame(1.0)
+        .color(xbtved.bg_color.plain_contrast())
+        .label("Add Program")
+        .callback(|| {
+            let (tx, rx) = channel();
+            thread::spawn(move || {
+                          tx.send(get_source()).unwrap();
+                          });
+            if let Ok(Some(prog_loc)) = rx.recv() {
+                let source: Source  = match prog_loc. 
+                xbtved.modify_current_schedule().(new_name);
+            }
+        }).draw(ui, gl);
+
+/*    TextBox::new(buff_display_uiid, buffer)
+        .font_size(16)
+        .dimensions(780.0, 100.0)
+        .position(10.0, 150.0)
+        .frame(1.0)
+        .frame_color(xbtved.bg_color.invert().plain_contrast())
+        .color(xbtved.bg_color.invert())
+        .callback(|_string: &mut String| {})
+        .draw(ui, gl); */
 }

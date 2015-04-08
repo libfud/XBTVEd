@@ -519,8 +519,6 @@ macro_rules! opt_display_vec {
 
 impl fmt::Display for Tags {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(write!(fmt, "(tags "));
-
         opt_display!(fmt, self, title, "title");
         opt_display!(fmt, self, media_type, "mediatype");
         opt_display!(fmt, self, genre, "genre");
@@ -557,9 +555,6 @@ impl fmt::Display for Tags {
         opt_display_vec!(fmt, self, audio_tracks, "audiotracks");
         opt_display_vec!(fmt, self, subtitles, "subtitles");
 
-        try!(write!(fmt, ")"));
         Ok(())
-
-            
     }
 }

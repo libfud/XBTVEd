@@ -68,6 +68,14 @@ impl<'a> Schedule {
     pub fn modify_program(&'a mut self, idx: usize) -> Option<&'a mut Program> {
         self.programs.get_mut(idx)
     }
+
+    pub fn program_ref(&'a self, idx: usize) -> Option<&'a Program> {
+        self.programs.get(idx)
+    }
+
+    pub fn programs_len(&self) -> usize {
+        self.programs.len()
+    }
 }   
 
 #[derive(Clone, PartialEq, Debug)]
@@ -167,22 +175,51 @@ impl fmt::Display for Program {
             Source::Pathname(ref x) => format!("local \"{}\")", x),
             Source::URL(ref x) => format!("network \"{}\")", x)
         }));
-        try!(writeln!(fmt, "{}", self.tags));
+        try!(write!(fmt, "(tags "));
+        try!(write!(fmt, "{})", self.tags));
         try!(writeln!(fmt, "(instr "));
         for instr in self.instructions.iter() {
-            try!(writeln!(fmt, "{}", format!("{}",instr)));
+            try!(write!(fmt, "{}", format!("{}",instr)));
         }
         try!(writeln!(fmt, "))"));
         Ok(())
     }
 }
 
-impl Program {
+impl<'a> Program {
     pub fn new(source: Source, tags: Tags, instrs: Vec<Instruction>) -> Program {
         Program { 
             location: source,
             tags: tags,
             instructions: instrs
         }
+    }
+
+    pub fn get_location(&self) -> Source {
+        self.location.clone()
+    }
+
+    pub fn get_tags(&'a self) -> &'a Tags {
+        &self.tags
+    }
+
+    pub fn get_instrs(&'a self) -> &'a Vec<Instruction> {
+        &self.instructions
+    }
+
+    pub fn instrs_to_string(&self) -> String {
+        let mut instrs = String::new();
+        for instr in self.instructions.iter() {
+            let msg = match instr {
+                &Instruction::Play(0, 0) => "Play All".to_string(),
+                &Instruction::Play(0, x) => format!("Play to {}", x),
+                &Instruction::Play(x, 0) => format!("Play from {}", x),
+                &Instruction::Play(x, y) => format!("Play from {} to {}", x, y),
+                &Instruction::SubProgram(ref x) => format!("Subprogram: {}", x.get_location())
+            };
+            instrs.push_str(&msg);
+            instrs.push_str(" ");
+        }
+        instrs
     }
 }
