@@ -23,13 +23,10 @@ pub struct EdBuffer {
 }
 
 impl<'a> EdBuffer {
+    #[no_mangle]
     pub fn new() -> EdBuffer {
-        let loc = Source::Pathname("foo".to_string());
-        let tags = Tags::new();
-        let instrs = Instruction::Play(0, 0);
-        let progs = vec!(Program::new(loc, tags, vec!(instrs)));
         EdBuffer {
-            schedule: Schedule::new("Example", progs),
+            schedule: Schedule::new("Example", vec!(Program::example())),
             filepath: None,
             undo_buffer: VecDeque::new(),
             redo_buffer: VecDeque::new()
@@ -45,6 +42,7 @@ impl<'a> EdBuffer {
         }
     }
 
+    #[no_mangle]
     pub fn apply(&mut self, action: Box<Action>) -> Result<(), String> {
         if let Err(f) = action.apply(self) {
             self.redo_buffer.clear();
@@ -55,6 +53,7 @@ impl<'a> EdBuffer {
         Ok(())
     }
 
+    #[no_mangle]
     pub fn undo(&mut self) {
         if let Some(action) = self.undo_buffer.pop_back() {
             if let Err(f) = action.reverse(self) {
@@ -64,6 +63,7 @@ impl<'a> EdBuffer {
         }
     }
 
+    #[no_mangle]
     pub fn redo(&mut self) {
         if let Some(action) = self.redo_buffer.pop_back() {
             if let Err(f) = action.apply(self) {
@@ -125,6 +125,7 @@ impl<'a> EdBuffer {
         self.schedule.delete_program(idx)
     }
 
+    #[no_mangle]
     pub fn save(&self) -> Result<(), Error> {
         if self.filepath.is_none() {
             Err(Error::new(ErrorKind::Other, "There is no file for this buffer yet. Please use save as"))
@@ -136,6 +137,7 @@ impl<'a> EdBuffer {
         }
     }
 
+    #[no_mangle]
     pub fn save_as(&mut self, path: &str) -> Result<(), Error> {
         self.filepath = Some(Path::new(path).to_path_buf());
         self.save()
@@ -149,6 +151,7 @@ pub struct XBTVEd {
 }
 
 impl<'a> XBTVEd {
+    #[no_mangle]
     pub fn new() -> XBTVEd {
         XBTVEd {
             buffers: vec!(EdBuffer::new()),
@@ -156,31 +159,37 @@ impl<'a> XBTVEd {
         }
     }
 
+    #[no_mangle]
     pub fn current_buffer(&'a self) -> &'a EdBuffer {
         &self.buffers.get(self.current_buffer).unwrap()
     }
  
+    #[no_mangle]
     pub fn current_buffer_mut(&'a mut self) -> &'a mut EdBuffer {
         self.buffers.get_mut(self.current_buffer).unwrap()
     }
 
+    #[no_mangle]
     pub fn add_buffer(&mut self) {
         self.buffers.push(EdBuffer::new());
         self.current_buffer += 1;
     }
 
+    #[no_mangle]
     pub fn prev_buffer(&mut self) {
         if self.current_buffer > 0 {
             self.current_buffer -= 1
         }
     }
 
+    #[no_mangle]
     pub fn next_buffer(&mut self) {
         if self.current_buffer + 1 < self.buffers.len() {
             self.current_buffer += 1;
         }
     }
 
+    #[no_mangle]
     pub fn set_current_schedule(&mut self, idx: usize) -> Result<(), String> {
         if idx >= self.buffers.len() {
             Err("Out of bounds".to_string())
@@ -190,6 +199,7 @@ impl<'a> XBTVEd {
         }
     }
 
+    #[no_mangle]
     pub fn remove_buffer(&mut self, idx: usize) -> Result<(), String> {
         if idx >= self.buffers.len() {
             Err("Out of bounds".to_string())
@@ -233,18 +243,4 @@ impl<'a> XBTVEd {
     }
 }
 
-pub fn get_input<'a>(msg: Option<&'a str>) -> Option<String> {
-    if let Some(words) = msg {
-        println!("{}", words);
-    }
-
-    let mut input = String::new();
-    let mut reader = io::stdin();
-    if let Err(f) = reader.read_line(&mut input) {
-        println!("{}", f);
-        return None
-    }
-
-    Some(input.trim().to_string())
-}
 
