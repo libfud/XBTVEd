@@ -39,15 +39,19 @@ impl<'a> Schedule {
         self.programs.clone()
     }
 
-    pub fn add_program(&mut self, prog: Program) {
-        self.programs.push(prog);
+    pub fn last_program(&'a self) -> Option<&'a Program> {
+        self.programs.get(self.programs.len() - 1)
+    }
+
+    pub fn add_program(&mut self, prog: &Program) {
+        self.programs.push(prog.clone());
     }
 
     pub fn pop_program(&mut self) -> Option<Program> {
         self.programs.pop()
     }
 
-    pub fn del_program(&mut self, idx: usize) -> Result<(), String> {
+    pub fn delete_program(&mut self, idx: usize) -> Result<(), String> {
         if idx > self.programs.len() - 1 {
             Err("Index is out of bounds.".to_string())
         } else {
@@ -56,11 +60,11 @@ impl<'a> Schedule {
         }
     }
 
-    pub fn ins_program(&mut self, idx: usize, prog: Program) -> Result<(), String> {
+    pub fn insert_program(&mut self, idx: usize, prog: &Program) -> Result<(), String> {
         if idx > self.programs.len() - 1 {
             Err("Index is out of bounds.".to_string())
         } else {
-            self.programs.insert(idx, prog);
+            self.programs.insert(idx, prog.clone());
             Ok(())
         }
     }
@@ -69,7 +73,7 @@ impl<'a> Schedule {
         self.programs.get_mut(idx)
     }
 
-    pub fn program_ref(&'a self, idx: usize) -> Option<&'a Program> {
+    pub fn get_program(&'a self, idx: usize) -> Option<&'a Program> {
         self.programs.get(idx)
     }
 
@@ -192,6 +196,14 @@ impl<'a> Program {
             location: source,
             tags: tags,
             instructions: instrs
+        }
+    }
+
+    pub fn example() -> Program {
+        Program {
+            location: Source::Pathname("example".to_string()),
+            tags: Tags::new(),
+            instructions: Vec::new()
         }
     }
 

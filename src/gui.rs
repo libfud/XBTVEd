@@ -10,8 +10,11 @@ use std::fs::File;
 use std::collections::VecDeque;
 use super::schedule::{Schedule, Source, Program, Instruction};
 use super::tags::Tags;
-use super::action::*;
+use super::action::{
+    Action,
+};
 
+#[repr(C)]
 pub struct EdBuffer {
     schedule: Schedule,
     filepath: Option<PathBuf>,
@@ -42,22 +45,30 @@ impl<'a> EdBuffer {
         }
     }
 
-    pub fn apply(&mut self, action: Box<Action>) {
-        action.apply(self);
+    pub fn apply(&mut self, action: Box<Action>) -> Result<(), String> {
+        if let Err(f) = action.apply(self) {
+            self.redo_buffer.clear();
+            return Err(f)
+        }
         self.undo_buffer.push_back(action);
         self.redo_buffer.clear();
+        Ok(())
     }
 
     pub fn undo(&mut self) {
         if let Some(action) = self.undo_buffer.pop_back() {
-            action.reverse(self);
+            if let Err(f) = action.reverse(self) {
+                panic!(format!("Unexpected error occurred: {}", f))
+            }
             self.redo_buffer.push_back(action);
         }
     }
 
     pub fn redo(&mut self) {
         if let Some(action) = self.redo_buffer.pop_back() {
-            action.apply(self);
+            if let Err(f) = action.apply(self) {
+                panic!(format!("Unexpected error occurred: {}", f))
+            }
             self.undo_buffer.push_back(action);
         }
     }
@@ -86,6 +97,34 @@ impl<'a> EdBuffer {
         self.schedule.set_name(name)
     }
 
+    pub fn get_name(&'a self) -> &'a str {
+        self.schedule.name_ref()
+    }
+
+    pub fn get_program(&'a self, idx: usize) -> Option<&'a Program> {
+        self.schedule.get_program(idx)
+    }
+
+    pub fn last_program(&'a self) -> Option<&'a Program> {
+        self.schedule.last_program()
+    }
+
+    pub fn add_program(&mut self, prog: &Program) {
+        self.schedule.add_program(prog);
+    }
+
+    pub fn pop_program(&mut self) -> Option<Program> {
+        self.schedule.pop_program()
+    }
+
+    pub fn insert_program(&mut self, idx: usize, prog: &Program) -> Result<(), String> {
+        self.schedule.insert_program(idx, prog)
+    }
+
+    pub fn delete_program(&mut self, idx: usize) -> Result<(), String> {
+        self.schedule.delete_program(idx)
+    }
+
     pub fn save(&self) -> Result<(), Error> {
         if self.filepath.is_none() {
             Err(Error::new(ErrorKind::Other, "There is no file for this buffer yet. Please use save as"))
@@ -103,6 +142,7 @@ impl<'a> EdBuffer {
     }
 }
 
+#[repr(C)]
 pub struct XBTVEd {
     buffers: Vec<EdBuffer>,
     current_buffer: usize,
@@ -208,107 +248,3 @@ pub fn get_input<'a>(msg: Option<&'a str>) -> Option<String> {
     Some(input.trim().to_string())
 }
 
-pub fn draw_ui(xbtved: &mut XBTVEd) {
-    let ui = 
-"Valid commands are the following:
-File:     Schedule:        Program:     Actions:        Selection:  
-New       ChangeName       ChangeLoc    AddPlayAction   SelectSched      
-Open      AddProgram       EditTags     AddSubProgram   SelectNextProg 
-Save      InsertProgram                 DeleteAction    SelectPrevProg
-SaveAs    DeleteProgram                 CutAction       SelectProg
-Quit      CutProgram                    CopyAction  
-          CopyProgram                   PasteAction
-          PasteProgram  
-
-Display:            History:
-DisplaySchedule     Undo
-DisplaySelected     Redo
-
-type `ui' to see this message again.
-";
-    println!("{}", ui);
-    loop {
-
-        let input = match get_input(None) {
-            Some(x) => x,
-            None => continue
-        };
-
-        match input.as_str() {
-            "quit" | "exit" | "Quit" => break,
-            "ui" => println!("{}", ui),
-            "new" | "New" => xbtved.add_buffer(),
-            "Open" | "open" => {
-                let path = match get_input(Some("Type the name of the file to open.")) {
-                    Some(x) => {
-                        if x.len() == 0 {
-                            println!("No filename, no opening.");
-                            continue
-                        }
-                        x
-                    },
-                    None => {
-                        println!("No filename, no opening.");
-                        continue
-                    }
-                };
-                if let Err(f) = xbtved.open_file(Path::new(&path)) {
-                    println!("{}", f)
-                }
-            },
-            "save" | "Save" => {
-                if let Err(uh_oh) = xbtved.save() {
-                    println!("{}", uh_oh)
-                }
-            },
-            "save as" | "SaveAs" => {
-                let path = match get_input(Some("Type the name of the file to open.")) {
-                    Some(x) => {
-                        if x.len() == 0 {
-                            println!("No filename, no opening.");
-                            continue
-                        }
-                        x
-                    },
-                    None => {
-                        println!("No filename, no opening.");
-                        continue
-                    }
-                };
-
-                if let Err(f) = xbtved.save_as(&path) {
-                    println!("{}", f)
-                }
-            },
-
-            "DisplaySchedule" | 
-            "displayschedule" | 
-            "display schedule" => println!("{}", xbtved.current_buffer().get_schedule()),
-
-            "ChangeName"  |
-            "Change Name" |
-            "change name" => {
-                let new = match get_input(Some("Type the new name.")) {
-                    Some(x) => {
-                        if x.len() == 0 {
-                            println!("No zero length names, please.");
-                            continue
-                        }
-                        x
-                    },
-                    None => {
-                        println!("No zero length names.");
-                        continue
-                    }
-                };
-                let old = xbtved.current_buffer().get_schedule().get_name();
-                xbtved.current_buffer_mut().apply(ChangeName::new(&old, &new));
-            },
-
-            "Undo" | "undo" => xbtved.current_buffer_mut().undo(),
-            "Redo" | "redo"  => xbtved.current_buffer_mut().redo(),
-
-            _ => println!("{} is not a valid command. Type ui to see all valid commands", input)
-        }
-    }
-}
