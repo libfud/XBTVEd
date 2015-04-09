@@ -23,11 +23,11 @@ impl<'a> Schedule {
         Schedule { name: nom.to_string(), programs: progs }
     }
 
-    pub fn change_name(&mut self, nom: String) {
-        self.name = nom;
+    pub fn set_name(&mut self, nom: &str) {
+        self.name = nom.to_string();
     }
 
-    pub fn name(&self) -> String {
+    pub fn get_name(&self) -> String {
         self.name.clone()
     }
 
