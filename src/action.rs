@@ -2,7 +2,9 @@ use super::gui::EdBuffer;
 use super::schedule::Program;
 
 pub trait Action {
+    #[no_mangle]
     fn apply(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String>;
+    #[no_mangle]
     fn reverse(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String>;
 }
 
