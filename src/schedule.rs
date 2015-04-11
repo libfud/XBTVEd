@@ -1,15 +1,16 @@
 use std::fmt;
-use super::tags::Tags;
+use super::program::Program;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Schedule {
     programs: Vec<Program>,
-    name: String
+    name: String,
+    current_program: Option<usize>
 }
 
 impl fmt::Display for Schedule {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(writeln!(fmt, "(schedule \"{}\" ", self.name));
+        try!(write!(fmt, "(schedule \"{}\" ", self.name));
         for program in self.programs.iter() {
             try!(write!(fmt, "{}", program));
         }
@@ -20,7 +21,23 @@ impl fmt::Display for Schedule {
 
 impl<'a> Schedule {
     pub fn new(nom: &str, progs: Vec<Program>) -> Schedule {
-        Schedule { name: nom.to_string(), programs: progs }
+        let current = match progs.len() {
+            0 => None,
+            x => Some(x - 1)
+        };
+        Schedule { 
+            name: nom.to_string(), 
+            programs: progs,
+            current_program: current
+        }
+    }
+
+    pub fn example() -> Schedule {
+        Schedule {
+            name: "Example".to_string(),
+            programs: vec!(Program::example()),
+            current_program: Some(0)
+        }
     }
 
     pub fn set_name(&mut self, nom: &str) {
@@ -69,7 +86,7 @@ impl<'a> Schedule {
         }
     }
 
-    pub fn modify_program(&'a mut self, idx: usize) -> Option<&'a mut Program> {
+    pub fn get_program_mut(&'a mut self, idx: usize) -> Option<&'a mut Program> {
         self.programs.get_mut(idx)
     }
 
@@ -81,157 +98,3 @@ impl<'a> Schedule {
         self.programs.len()
     }
 }   
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Source {
-    Pathname(String),
-    URL(String)
-}
-
-impl fmt::Display for Source {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Source::Pathname(ref x) => try!(write!(fmt, "local {}", x.clone())),
-            Source::URL(ref x) => try!(write!(fmt, "network {}", x.clone()))
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Instruction {
-    Play(usize, usize), //Start Time and End Time.
-    SubProgram(Program)
-}
-
-impl fmt::Display for Instruction {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Instruction::Play(x, y) => {
-                try!(write!(fmt, "(play "));
-                
-                let (mut total_x, mut total_y) = (x, y);
-                
-                let (start_h, duration_h) = (total_x / 3600, total_y / 3600);
-                
-                total_x -= start_h * 3600;
-                total_y -= duration_h * 3600;
-                
-                let (start_m, duration_m) = (total_x / 60, total_y / 60);
-                
-                total_x -= start_m * 60;
-                total_y -= duration_m * 60;
-                
-                try!(write!(fmt, " {}:{}:{} ",
-                            if start_h < 10 { 
-                                format!("{}{}",0,start_h) 
-                            } else { 
-                                start_h.to_string() 
-                            },
-                            if start_m < 10 { 
-                                format!("{}{}",0,start_m)
-                            } else { 
-                                start_m.to_string()
-                            },
-                            if total_x < 10 { 
-                                format!("{}{}",0,total_x)
-                            } else { 
-                                total_x.to_string()
-                            }));
-
-                try!(write!(fmt, " {}:{}:{} ",
-                            if duration_h < 10 { 
-                                format!("{}{}",0,duration_h) 
-                            } else { 
-                                duration_h.to_string()
-                            },
-                            if duration_m < 10 { 
-                                format!("{}{}",0,duration_m) 
-                            } else { 
-                                duration_m.to_string()
-                            },
-                            if total_y < 10 { 
-                                format!("{}{}",0,total_y)
-                            } else { 
-                                total_y.to_string()
-                            }));
-
-                try!(write!(fmt, ")"));
-            },
-            Instruction::SubProgram(ref x) => {
-                try!(write!(fmt, "{}", x.to_string()));
-            }
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Program {
-    location: Source,
-    tags: Tags,
-    instructions: Vec<Instruction>
-}
-
-impl fmt::Display for Program {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        try!(writeln!(fmt, "(program ({}", match (*self).location {
-            Source::Pathname(ref x) => format!("local \"{}\")", x),
-            Source::URL(ref x) => format!("network \"{}\")", x)
-        }));
-        try!(write!(fmt, "(tags "));
-        try!(write!(fmt, "{})", self.tags));
-        try!(writeln!(fmt, "(instr "));
-        for instr in self.instructions.iter() {
-            try!(write!(fmt, "{}", format!("{}",instr)));
-        }
-        try!(writeln!(fmt, "))"));
-        Ok(())
-    }
-}
-
-impl<'a> Program {
-    pub fn new(source: Source, tags: Tags, instrs: Vec<Instruction>) -> Program {
-        Program { 
-            location: source,
-            tags: tags,
-            instructions: instrs
-        }
-    }
-
-    pub fn example() -> Program {
-        Program {
-            location: Source::Pathname("example".to_string()),
-            tags: Tags::new(),
-            instructions: Vec::new()
-        }
-    }
-
-    pub fn get_location(&self) -> Source {
-        self.location.clone()
-    }
-
-    pub fn get_tags(&'a self) -> &'a Tags {
-        &self.tags
-    }
-
-    pub fn get_instrs(&'a self) -> &'a Vec<Instruction> {
-        &self.instructions
-    }
-
-    pub fn instrs_to_string(&self) -> String {
-        let mut instrs = String::new();
-        for instr in self.instructions.iter() {
-            let msg = match instr {
-                &Instruction::Play(0, 0) => "Play All".to_string(),
-                &Instruction::Play(0, x) => format!("Play to {}", x),
-                &Instruction::Play(x, 0) => format!("Play from {}", x),
-                &Instruction::Play(x, y) => format!("Play from {} to {}", x, y),
-                &Instruction::SubProgram(ref x) => format!("Subprogram: {}", x.get_location())
-            };
-            instrs.push_str(&msg);
-            instrs.push_str(" ");
-        }
-        instrs
-    }
-}

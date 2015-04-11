@@ -1,5 +1,6 @@
 pub use self::tokenize::{TokenStream, MaybeToken};
-pub use super::schedule::{Schedule, Source};
+pub use super::schedule::Schedule;
+pub use super::program::Source;
 pub use super::tags::{TagType, Tags};
 use self::translate::translate;
 use std::fmt;

@@ -1,5 +1,5 @@
 use super::gui::EdBuffer;
-use super::schedule::Program;
+use super::program::Program;
 
 pub trait Action {
     #[no_mangle]
@@ -18,7 +18,6 @@ impl Action for ChangeName {
         buffer.set_name(&self.new);
         Ok(())
     }
-
     fn reverse(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String> {
         buffer.set_name(&self.old);
         Ok(())

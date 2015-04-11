@@ -10,6 +10,7 @@ use std::mem;
 pub mod action;
 pub mod parse;
 pub mod schedule;
+pub mod program;
 pub mod tags;
 pub mod blocks;
 pub mod gui;

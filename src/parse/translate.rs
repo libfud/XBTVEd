@@ -5,8 +5,8 @@ use super::{Token, Schedule, ParseError};
 use super::Token::*;
 use super::tokenize::TokenStream;
 use super::super::tags::Tags;
-use super::super::schedule::{Program, Source, Instruction};
-use super::super::schedule::Source::*;
+use super::super::program::{Program, Source, Instruction};
+use super::super::program::Source::*;
 
 pub type SchedResult = Result<Schedule, ParseError>;
 pub type ParseResult = Result<(), ParseError>;

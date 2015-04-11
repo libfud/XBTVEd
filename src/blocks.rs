@@ -1,5 +1,6 @@
-use super::schedule::{Schedule, Program, Source, Instruction};
-use super::schedule::Instruction::{Play, SubProgram};
+use super::schedule::Schedule;
+use super::program::{Program, Source, Instruction};
+use super::program::Instruction::{Play, SubProgram};
 use super::tags::Tags;
 
 #[derive(Clone)]

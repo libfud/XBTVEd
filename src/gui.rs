@@ -1,15 +1,8 @@
-/*
-use std::sync::mpsc::channel;
-use std::thread;
-*/
-
-use std::io;
 use std::io::{Error, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::collections::VecDeque;
-use super::schedule::{Schedule, Source, Program, Instruction};
-use super::tags::Tags;
+use super::schedule::Schedule;
+use super::program::Program;
 use super::action::{
     Action,
 };
@@ -18,58 +11,54 @@ use super::action::{
 pub struct EdBuffer {
     schedule: Schedule,
     filepath: Option<PathBuf>,
-    undo_buffer: VecDeque<Box<Action>>,
-    redo_buffer: VecDeque<Box<Action>>
+    undo_buffer: Vec<Box<Action>>,
+    redo_buffer: Vec<Box<Action>>
 }
 
 impl<'a> EdBuffer {
-    #[no_mangle]
     pub fn new() -> EdBuffer {
         EdBuffer {
-            schedule: Schedule::new("Example", vec!(Program::example())),
+            schedule: Schedule::example(),
             filepath: None,
-            undo_buffer: VecDeque::new(),
-            redo_buffer: VecDeque::new()
+            undo_buffer: Vec::new(),
+            redo_buffer: Vec::new()
         }
     }
 
-    pub fn from_schedule(sched: Schedule) -> EdBuffer {
+    pub fn from_schedule(sched: &Schedule) -> EdBuffer {
         EdBuffer {
-            schedule: sched,
+            schedule: sched.clone(),
             filepath: None,
-            undo_buffer: VecDeque::new(),
-            redo_buffer: VecDeque::new()
+            undo_buffer: Vec::new(),
+            redo_buffer: Vec::new()
         }
     }
 
-    #[no_mangle]
     pub fn apply(&mut self, action: Box<Action>) -> Result<(), String> {
         if let Err(f) = action.apply(self) {
             self.redo_buffer.clear();
             return Err(f)
         }
-        self.undo_buffer.push_back(action);
+        self.undo_buffer.push(action);
         self.redo_buffer.clear();
         Ok(())
     }
 
-    #[no_mangle]
     pub fn undo(&mut self) {
-        if let Some(action) = self.undo_buffer.pop_back() {
+        if let Some(action) = self.undo_buffer.pop() {
             if let Err(f) = action.reverse(self) {
                 panic!(format!("Unexpected error occurred: {}", f))
             }
-            self.redo_buffer.push_back(action);
+            self.redo_buffer.push(action);
         }
     }
 
-    #[no_mangle]
     pub fn redo(&mut self) {
-        if let Some(action) = self.redo_buffer.pop_back() {
+        if let Some(action) = self.redo_buffer.pop() {
             if let Err(f) = action.apply(self) {
                 panic!(format!("Unexpected error occurred: {}", f))
             }
-            self.undo_buffer.push_back(action);
+            self.undo_buffer.push(action);
         }
     }
 
@@ -85,8 +74,11 @@ impl<'a> EdBuffer {
         self.filepath = Some(path.to_path_buf())
     }
 
-    pub fn get_path(&self) -> Option<PathBuf> {
-        self.filepath.clone()
+    pub fn get_path(&'a self) -> Option<&'a Path> {
+        match self.filepath {
+            Some(pathbuf) => Some(pathbuf.as_path()),
+            None => None
+        }
     }
 
     pub fn get_schedule(&'a self) -> &'a Schedule {
@@ -125,19 +117,17 @@ impl<'a> EdBuffer {
         self.schedule.delete_program(idx)
     }
 
-    #[no_mangle]
     pub fn save(&self) -> Result<(), Error> {
         if self.filepath.is_none() {
             Err(Error::new(ErrorKind::Other, "There is no file for this buffer yet. Please use save as"))
         } else { 
-            let path = self.get_path().unwrap();
+            let path = self.get_path().unwrap().to_path_buf();
             let mut file = try!(File::create(path.as_path()));
             try!(file.write_all(self.get_schedule().to_string().as_bytes()));
             Ok(())
         }
     }
 
-    #[no_mangle]
     pub fn save_as(&mut self, path: &str) -> Result<(), Error> {
         self.filepath = Some(Path::new(path).to_path_buf());
         self.save()
@@ -151,7 +141,6 @@ pub struct XBTVEd {
 }
 
 impl<'a> XBTVEd {
-    #[no_mangle]
     pub fn new() -> XBTVEd {
         XBTVEd {
             buffers: vec!(EdBuffer::new()),
@@ -159,37 +148,31 @@ impl<'a> XBTVEd {
         }
     }
 
-    #[no_mangle]
     pub fn current_buffer(&'a self) -> &'a EdBuffer {
         &self.buffers.get(self.current_buffer).unwrap()
     }
  
-    #[no_mangle]
     pub fn current_buffer_mut(&'a mut self) -> &'a mut EdBuffer {
         self.buffers.get_mut(self.current_buffer).unwrap()
     }
 
-    #[no_mangle]
     pub fn add_buffer(&mut self) {
         self.buffers.push(EdBuffer::new());
         self.current_buffer += 1;
     }
 
-    #[no_mangle]
     pub fn prev_buffer(&mut self) {
         if self.current_buffer > 0 {
             self.current_buffer -= 1
         }
     }
 
-    #[no_mangle]
     pub fn next_buffer(&mut self) {
         if self.current_buffer + 1 < self.buffers.len() {
             self.current_buffer += 1;
         }
     }
 
-    #[no_mangle]
     pub fn set_current_schedule(&mut self, idx: usize) -> Result<(), String> {
         if idx >= self.buffers.len() {
             Err("Out of bounds".to_string())
@@ -199,7 +182,6 @@ impl<'a> XBTVEd {
         }
     }
 
-    #[no_mangle]
     pub fn remove_buffer(&mut self, idx: usize) -> Result<(), String> {
         if idx >= self.buffers.len() {
             Err("Out of bounds".to_string())
@@ -218,6 +200,19 @@ impl<'a> XBTVEd {
     }
 
     pub fn open_file(&mut self, path: &Path) -> Result<(), Error> {
+        if let Some(idx) = self.buffers.iter().position(|&edbuf| edbuf.get_path() == Some(path)) {
+            self.current_buffer = idx;
+            return Ok(())
+        }
+/*
+        match self.buffers.iter().position(|x| x == pathbuf) {
+            Some(idx) => {
+                self.current_buffer = idx;
+                return
+            },
+            None => { }
+        }
+*/
         let mut file = try!(File::open(path));
         let mut s = String::new();
         try!(file.read_to_string(&mut s));
@@ -226,7 +221,7 @@ impl<'a> XBTVEd {
             Err(f) => return Err(Error::new(ErrorKind::Other, f.to_string().as_str()))
         };
 
-        let mut buffer = EdBuffer::from_schedule(sched);
+        let mut buffer = EdBuffer::from_schedule(&sched);
         buffer.set_path(path);
         self.buffers.push(buffer);
         self.current_buffer += 1;
@@ -241,6 +236,12 @@ impl<'a> XBTVEd {
     pub fn save_as(&mut self, path: &str) -> Result<(), Error> {
         self.current_buffer_mut().save_as(path)
     }
+
+    pub fn buffers_len(&self) -> usize {
+        self.buffers.len()
+    }
+
+    pub fn add_example(&mut self) {
+        self.buffers.push(EdBuffer::new());
+    }
 }
-
-
