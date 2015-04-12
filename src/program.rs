@@ -222,28 +222,20 @@ impl<'a> Program {
         self.location = location.clone();
     }
 
-    pub fn get_path(&'a self) -> Option<&'a str> {
-        self.location.path()
-    }
-
-    pub fn set_path(&mut self, path: &str) {
-        self.location = Source::Pathname(path.to_string());
-    }
-
-    pub fn get_url(&'a self) -> Option<&'a str> {
-        self.location.url()
-    }
-
-    pub fn set_url(&mut self, url: &str) {
-        self.location = Source::URL(url.to_string())
-    }
-
     pub fn is_location_path(&self) -> bool {
         self.location.is_path()
     }
 
+    pub fn get_path(&'a self) -> Option<&'a str> {
+        self.location.path()
+    }
+
     pub fn is_location_url(&self) -> bool {
         self.location.is_url()
+    }
+
+    pub fn get_url(&'a self) -> Option<&'a str> {
+        self.location.url()
     }
 
     pub fn get_tags(&'a self) -> &'a Tags {
@@ -262,7 +254,7 @@ impl<'a> Program {
         &self.instructions
     }
 
-    pub fn get_current_instr(&'a self) -> Option<&'a Instruction> {
+    pub fn get_instr(&'a self) -> Option<&'a Instruction> {
         if self.current_instr.is_none() {
             None
         } else {
@@ -270,7 +262,7 @@ impl<'a> Program {
         }
     }
 
-    pub fn get_current_instr_mut(&'a mut self) -> Option<&'a mut Instruction> {
+    pub fn get_instr_mut(&'a mut self) -> Option<&'a mut Instruction> {
         if self.current_instr.is_none() {
             None
         } else {
@@ -278,11 +270,11 @@ impl<'a> Program {
         }
     }
 
-    pub fn get_instr(&'a self, idx: usize) -> Option<&'a Instruction> {
+    pub fn get_instr_at(&'a self, idx: usize) -> Option<&'a Instruction> {
         self.instructions.get(idx)
     }
 
-    pub fn get_instr_mut(&'a mut self, idx: usize) -> Option<&'a mut Instruction> {
+    pub fn get_instr_mut_at(&'a mut self, idx: usize) -> Option<&'a mut Instruction> {
         self.instructions.get_mut(idx)
     }
 
@@ -365,5 +357,4 @@ impl<'a> Program {
             (false, Some(_)) => panic!("Bad condition of instructions for program.")
         }
     }
-
 }

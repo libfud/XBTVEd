@@ -76,7 +76,7 @@ impl<'a> EdBuffer {
 
     pub fn get_path(&'a self) -> Option<&'a Path> {
         match self.filepath {
-            Some(pathbuf) => Some(pathbuf.as_path()),
+            Some(ref pathbuf) => Some(pathbuf.as_path()),
             None => None
         }
     }
@@ -93,8 +93,20 @@ impl<'a> EdBuffer {
         self.schedule.name_ref()
     }
 
-    pub fn get_program(&'a self, idx: usize) -> Option<&'a Program> {
-        self.schedule.get_program(idx)
+    pub fn get_program(&'a self) -> Option<&'a Program> {
+        self.schedule.get_program()
+    }
+
+    pub fn get_program_at(&'a self, idx: usize) -> Option<&'a Program> {
+        self.schedule.get_program_at(idx)
+    }
+
+    pub fn get_program_mut(&'a mut self) -> Option<&'a mut Program> {
+        self.schedule.get_program_mut()
+    }
+
+    pub fn get_program_at_mut(&'a mut self, idx: usize) -> Option<&'a mut Program> {
+        self.schedule.get_program_mut_at(idx)
     }
 
     pub fn last_program(&'a self) -> Option<&'a Program> {
@@ -200,19 +212,11 @@ impl<'a> XBTVEd {
     }
 
     pub fn open_file(&mut self, path: &Path) -> Result<(), Error> {
-        if let Some(idx) = self.buffers.iter().position(|&edbuf| edbuf.get_path() == Some(path)) {
+        if let Some(idx) = self.buffers.iter().position(|ref edbuf| edbuf.get_path() == Some(path)) {
             self.current_buffer = idx;
             return Ok(())
         }
-/*
-        match self.buffers.iter().position(|x| x == pathbuf) {
-            Some(idx) => {
-                self.current_buffer = idx;
-                return
-            },
-            None => { }
-        }
-*/
+
         let mut file = try!(File::open(path));
         let mut s = String::new();
         try!(file.read_to_string(&mut s));

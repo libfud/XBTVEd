@@ -1,19 +1,19 @@
 use super::gui::EdBuffer;
-use super::program::Program;
+use super::program::{Program, Source};
 
 pub trait Action {
-    #[no_mangle]
     fn apply(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String>;
-    #[no_mangle]
     fn reverse(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String>;
 }
 
-pub struct ChangeName {
+//Schedule methods
+
+pub struct SetName {
     old: String,
     new: String
 }
 
-impl Action for ChangeName {
+impl Action for SetName {
     fn apply(&self, buffer: &mut super::gui::EdBuffer) -> Result<(), String> {
         buffer.set_name(&self.new);
         Ok(())
@@ -24,13 +24,13 @@ impl Action for ChangeName {
     }
 }
 
-impl ChangeName {
-    pub fn new(orig: &str, novo: &str) -> Box<Action> {
-        let changename = ChangeName {
-            old: orig.to_string(),
+impl SetName {
+    pub fn new(buffer: &EdBuffer, novo: &str) -> Box<Action> {
+        let set_name = SetName {
+            old: buffer.get_name().to_string(),
             new: novo.to_string()
         };
-        Box::new(changename)
+        Box::new(set_name)
     }
 }
 
@@ -123,7 +123,7 @@ pub struct DeleteProgram {
 
 impl DeleteProgram {
     pub fn new(buffer: &EdBuffer, idx: usize) -> Result<Box<Action>, String> {
-        match buffer.get_program(idx) {
+        match buffer.get_program_at(idx) {
             Some(p) => Ok(Box::new(DeleteProgram { program: p.clone(), index: idx })),
             None => Err(format!("Can not delete program at {} because it does not exist", idx))
         }
@@ -139,6 +139,39 @@ impl Action for DeleteProgram {
         if let Err(f) = buffer.insert_program(self.index, &self.program) {
             panic!(format!("Modifications made after undo. Error: {}", f))
         }
+        Ok(())
+    }
+}
+
+//Program methods
+pub struct SetSource {
+    old: Source,
+    new: Source,
+    index: usize
+}
+
+impl SetSource {
+    pub fn new(buffer: &EdBuffer, novo: &Source) -> Result<Box<Action>, String> {
+        if let Some(ref prog) = buffer.get_program() {
+            Ok(Box::new(SetSource { 
+                old: prog.get_location().clone(), 
+                new: novo.clone(),
+                index: buffer.get_schedule().get_current_program_idx().unwrap()
+            }))
+        } else {
+            Err("No selected program".to_string())
+        }
+    }
+}
+
+impl Action for SetSource {
+    fn apply(&self, buffer: &mut EdBuffer) -> Result<(), String> {
+        buffer.get_program_at_mut(self.index).unwrap().set_location(&self.new);
+        Ok(())
+    }
+
+    fn reverse(&self, buffer: &mut EdBuffer) -> Result<(), String> {
+        buffer.get_program_at_mut(self.index).unwrap().set_location(&self.old);
         Ok(())
     }
 }

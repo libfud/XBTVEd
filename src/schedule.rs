@@ -86,15 +86,77 @@ impl<'a> Schedule {
         }
     }
 
-    pub fn get_program_mut(&'a mut self, idx: usize) -> Option<&'a mut Program> {
+    pub fn get_program_mut_at(&'a mut self, idx: usize) -> Option<&'a mut Program> {
         self.programs.get_mut(idx)
     }
 
-    pub fn get_program(&'a self, idx: usize) -> Option<&'a Program> {
+    pub fn get_program_at(&'a self, idx: usize) -> Option<&'a Program> {
         self.programs.get(idx)
+    }
+
+    pub fn get_program(&'a self) -> Option<&'a Program> {
+        if self.current_program == None {
+            None
+        } else {
+            self.programs.get(self.current_program.unwrap())
+        }
+    }
+
+    pub fn get_program_mut(&'a mut self) -> Option<&'a mut Program> {
+        if self.current_program == None {
+            None
+        } else {
+            self.programs.get_mut(self.current_program.unwrap())
+        }
     }
 
     pub fn programs_len(&self) -> usize {
         self.programs.len()
+    }
+
+    pub fn get_current_program_idx(&self) -> Option<usize> {
+        self.current_program
+    }
+
+    pub fn set_current_program_idx(&mut self, idx: usize) -> Result<(), String> {
+        if idx > self.programs.len() {
+            Err("Out of bounds".to_string())
+        } else {
+            self.current_program = Some(idx);
+            Ok(())
+        }
+    }
+
+    pub fn next_prog(&mut self) {
+        let current_maybe = self.current_program;
+        match (self.programs.len() > 0, current_maybe) {
+            (true, Some(current)) => {
+                let max = self.programs.len() - 1;
+                if current < max {
+                    self.current_program = Some(current + 1);
+                }
+            },
+            (true, None) => {
+                self.current_program = Some(0);
+            },
+            (false, None) => { },
+            (false, Some(_)) => panic!("Bad condition of instructions for program.")
+        }
+    }
+
+    pub fn prev_instr(&mut self) {
+        let current_maybe = self.current_program;
+        match (self.programs.len() > 0, current_maybe) {
+            (true, Some(current)) => {
+                if current > 0 {
+                    self.current_program = Some(current - 1);
+                }
+            },
+            (true, None) => {
+                self.current_program = Some(0);
+            },
+            (false, None) => { },
+            (false, Some(_)) => panic!("Bad condition of instructions for program.")
+        }
     }
 }   
