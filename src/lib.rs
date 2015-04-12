@@ -79,9 +79,9 @@ pub extern fn get_buffer_name(xbtved: *const XBTVEd) -> *const i8 {
     }
 }
 
-fn ptr_to_string(bullshit: *const libc::c_char) -> String {
+fn ptr_to_string(name: *const libc::c_char) -> String {
     unsafe {
-        match String::from_utf8(CStr::from_ptr(bullshit).to_bytes().to_vec()) {
+        match String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()) {
             Ok(x) => x,
             Err(f) => panic!(f)
         }
