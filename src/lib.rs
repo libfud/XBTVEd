@@ -1,6 +1,6 @@
 #![crate_name = "XBTVEd"]
 #![crate_type = "dylib"]
-#![feature(libc, convert, collections, unboxed_closures)]
+#![feature(alloc, libc, convert, collections, unboxed_closures)]
 
 extern crate libc;
 
@@ -23,6 +23,13 @@ pub extern fn create_app() -> *const XBTVEd {
     let app = Box::new(XBTVEd::new());
     unsafe {
         mem::transmute(app)
+    }
+}
+
+#[no_mangle]
+pub extern fn destroy_app(xbtved: *mut XBTVEd) {
+    unsafe {
+        drop(Box::from_raw(xbtved));
     }
 }
 
