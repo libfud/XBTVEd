@@ -10,6 +10,8 @@ extern "C" {
 
   void open(struct XBTVEd const* xbtved, const char* path);
   bool save_all(struct XBTVEd const* xbtved);
+  bool save(struct XBTVEd const* xbtved);
+  bool save_as(struct XBTVEd const* xbtved, const char* path);
 
   char* sched_display(struct XBTVEd const* xbtved);
 
@@ -37,10 +39,14 @@ namespace App{
         XBTVEditor();
         ~XBTVEditor();
         bool saveAll();
-        void loadFile(QString&);
+        bool saveAs(QString& path);
+        bool saveFile();
+        void loadFile(QString& path);
         void newSchedule();
         std::string getSchedule();
         bool anyBufModified();
+        void unDo();
+        void reDo();
 
     signals:
         void bufModified(void);

@@ -26,6 +26,8 @@ private slots:
     bool save();
     bool saveAs();
     bool saveAll();
+    void undo();
+    void redo();
     void about();
     void buffersModified();
 
@@ -58,12 +60,8 @@ private:
     QAction *saveAsAct;
     QAction *saveAllAct;
     QAction *exitAct;
-    QAction *cutAct;
-    QAction *copyAct;
-    QAction *pastAct;
     QAction *undoAct;
     QAction *redoAct;
-    QAction *docAct;
     QAction *aboutAct;
     QAction *aboutQtAct;
 };
