@@ -135,3 +135,31 @@ pub extern fn add_program(xbtved: *mut XBTVEd,
         }
     }
 }
+
+#[no_mangle]
+pub extern fn save_all(xbtved: *mut XBTVEd) -> bool {
+    unsafe {
+        match (*xbtved).save_all() {
+            Ok(_) => true,
+            Err(_) => false
+        }
+    }
+}
+
+#[no_mangle]
+pub extern fn open(xbtved: *mut XBTVEd, name: *const libc::c_char) {
+    unsafe {
+        let path = ptr_to_string(name);
+        match (*xbtved).open_file(std::path::Path::new(&path)) {
+            Ok(_) => { },
+            Err(f) => println!("{}", f)
+        }
+    }
+}
+
+#[no_mangle]
+pub extern fn buffers_modified(xbtved: *const XBTVEd) -> bool {
+    unsafe {
+        (*xbtved).any_buffer_modified()
+    }
+}

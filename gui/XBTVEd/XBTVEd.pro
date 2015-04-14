@@ -21,3 +21,10 @@ HEADERS  += mainwindow.h \
     xbtved.h
 
 FORMS    += mainwindow.ui
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/../../target/debug/release/ -lXBTVEd-68102e438aa431ea
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/../../target/debug/debug/ -lXBTVEd-68102e438aa431ea
+else:unix: LIBS += -L$$PWD/../../target/debug/ -lXBTVEd-68102e438aa431ea
+
+INCLUDEPATH += $$PWD/../../target/debug
+DEPENDPATH += $$PWD/../../target/debug

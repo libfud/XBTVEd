@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QLabel>
 #include "xbtved.h"
 
 namespace Ui {
@@ -26,8 +27,7 @@ private slots:
     bool saveAs();
     bool saveAll();
     void about();
-    void bufModified();
-    void anyBufModified();
+    void buffersModified();
 
 private:
     Ui::MainWindow *ui;
@@ -39,6 +39,7 @@ private:
     void saveFile(const QString(&fileName));
 
     App::XBTVEditor *xbtveditor;
+    QLabel *templabel;
 
     QMenu *fileMenu;
     QMenu *editMenu;
