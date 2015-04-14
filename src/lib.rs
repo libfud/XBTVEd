@@ -18,6 +18,15 @@ pub mod gui;
 pub use gui::XBTVEd;
 use action::*;
 
+fn ptr_to_string(name: *const libc::c_char) -> String {
+    unsafe {
+        match String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()) {
+            Ok(x) => x,
+            Err(f) => panic!(f)
+        }
+    }
+}
+
 #[no_mangle]
 pub extern fn create_app() -> *const XBTVEd {
     let app = Box::new(XBTVEd::new());
@@ -30,6 +39,13 @@ pub extern fn create_app() -> *const XBTVEd {
 pub extern fn destroy_app(xbtved: *mut XBTVEd) {
     unsafe {
         drop(Box::from_raw(xbtved));
+    }
+}
+
+#[no_mangle]
+pub extern fn sched_display(xbtved: *mut XBTVEd) -> *const i8 {
+    unsafe {
+        CString::new((*xbtved).current_buffer().get_schedule().to_string().as_str()).unwrap().as_ptr()
     }
 }
 
@@ -82,15 +98,6 @@ pub extern fn get_buffer_name(xbtved: *const XBTVEd) -> *const i8 {
         match CString::new((*xbtved).current_buffer().get_name()) {
             Ok(x) => x.as_ptr(),
             Err(_) => CString::new("SCREWED UP!").unwrap().as_ptr()
-        }
-    }
-}
-
-fn ptr_to_string(name: *const libc::c_char) -> String {
-    unsafe {
-        match String::from_utf8(CStr::from_ptr(name).to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
         }
     }
 }

@@ -12,7 +12,8 @@ pub struct EdBuffer {
     schedule: Schedule,
     filepath: Option<PathBuf>,
     undo_buffer: Vec<Box<Action>>,
-    redo_buffer: Vec<Box<Action>>
+    redo_buffer: Vec<Box<Action>>,
+    modified: bool
 }
 
 impl<'a> EdBuffer {
@@ -21,7 +22,8 @@ impl<'a> EdBuffer {
             schedule: Schedule::example(),
             filepath: None,
             undo_buffer: Vec::new(),
-            redo_buffer: Vec::new()
+            redo_buffer: Vec::new(),
+            modified: true
         }
     }
 
@@ -30,15 +32,18 @@ impl<'a> EdBuffer {
             schedule: sched.clone(),
             filepath: None,
             undo_buffer: Vec::new(),
-            redo_buffer: Vec::new()
+            redo_buffer: Vec::new(),
+            modified: false
         }
     }
 
     pub fn apply(&mut self, action: Box<Action>) -> Result<(), String> {
         if let Err(f) = action.apply(self) {
+            self.modified = true;
             self.redo_buffer.clear();
             return Err(f)
         }
+        self.modified = true;
         self.undo_buffer.push(action);
         self.redo_buffer.clear();
         Ok(())
@@ -49,6 +54,7 @@ impl<'a> EdBuffer {
             if let Err(f) = action.reverse(self) {
                 panic!(format!("Unexpected error occurred: {}", f))
             }
+            self.modified = true;
             self.redo_buffer.push(action);
         }
     }
@@ -129,13 +135,18 @@ impl<'a> EdBuffer {
         self.schedule.delete_program(idx)
     }
 
-    pub fn save(&self) -> Result<(), Error> {
+    pub fn modified(&self) -> bool {
+        self.modified
+    }
+
+    pub fn save(&mut self) -> Result<(), Error> {
         if self.filepath.is_none() {
             Err(Error::new(ErrorKind::Other, "There is no file for this buffer yet. Please use save as"))
         } else { 
             let path = self.get_path().unwrap().to_path_buf();
             let mut file = try!(File::create(path.as_path()));
             try!(file.write_all(self.get_schedule().to_string().as_bytes()));
+            self.modified = false;
             Ok(())
         }
     }
@@ -233,16 +244,33 @@ impl<'a> XBTVEd {
         Ok(())
     }
 
-    pub fn save(&self) -> Result<(), Error> {
-        self.current_buffer().save()
+    pub fn save(&mut self) -> Result<(), Error> {
+        self.current_buffer_mut().save()
     }
 
     pub fn save_as(&mut self, path: &str) -> Result<(), Error> {
         self.current_buffer_mut().save_as(path)
     }
 
+    pub fn save_all(&mut self) -> Result<(), Error> {
+        for buf in self.buffers.iter_mut() {
+            if buf.modified() {
+                try!(buf.save());
+            }
+        }
+        Ok(())
+    }
+
     pub fn buffers_len(&self) -> usize {
         self.buffers.len()
+    }
+
+    pub fn buffer_modified(&self) -> bool {
+        self.current_buffer().modified()
+    }
+
+    pub fn any_buffer_modified(&self) -> bool {
+        self.buffers.iter().any(|buf| buf.modified())
     }
 
     pub fn add_example(&mut self) {

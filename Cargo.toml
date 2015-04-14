@@ -4,10 +4,11 @@ name = "XBTVEd"
 version = "0.0.1"
 authors = ["Dominick Allen <dominick.allen1989@gmail.com>"]
 
-[[bin]]
+[lib]
 
 name = "XBTVEd"
 
+crate-type = ["dylib"]
+
 [dependencies.chrono]
 version = "0.2.10"
-
