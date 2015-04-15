@@ -20,28 +20,26 @@ public:
 protected:
     void closeEvent(QCloseEvent *event);
 
-private slots:
-    void newFile();
-    void open();
-    bool save();
-    bool saveAs();
-    bool saveAll();
-    void undo();
-    void redo();
-    void about();
-    void buffersModified();
+//private slots:
+//    void newFile();
+//    void open();
+//    bool saveBuffer();
+//    bool saveAs();
+//    bool saveAll();
+//    void undo();
+//    void redo();
+//    void about();
+//    void buffersModified();
 
 private:
     Ui::MainWindow *ui;
     void createActions();
     void createMenus();
     void createToolBars();
-    bool maybeSave();
-    void loadFile(const QString(&fileName));
-    void saveFile(const QString(&fileName));
+//    bool maybeSave();
 
-    App::XBTVEditor *xbtveditor;
-    QLabel *templabel;
+//    App::XBTVEditor *xbtveditor;
+//    QLabel *templabel;
 
     QMenu *fileMenu;
     QMenu *editMenu;
@@ -55,6 +53,7 @@ private:
     QToolBar *progToolBar;
     QToolBar *instrToolBar;
     QAction *newAct;
+/*
     QAction *openAct;
     QAction *saveAct;
     QAction *saveAsAct;
@@ -64,6 +63,7 @@ private:
     QAction *redoAct;
     QAction *aboutAct;
     QAction *aboutQtAct;
+    */
 };
 
 #endif // MAINWINDOW_H

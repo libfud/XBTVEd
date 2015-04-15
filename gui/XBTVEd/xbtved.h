@@ -1,10 +1,11 @@
+
 #ifndef __XBTVED_H
 #define __XBTVED_H
 #include <QObject>
 #include <QString>
 
 extern "C" {
-  struct XBTVEd;
+/*  struct XBTVEd;
   struct XBTVEd const* create_app();
   void destroy_app(struct XBTVEd const* xbtved);
 
@@ -13,7 +14,7 @@ extern "C" {
   bool save(struct XBTVEd const* xbtved);
   bool save_as(struct XBTVEd const* xbtved, const char* path);
 
-  char* sched_display(struct XBTVEd const* xbtved);
+  const char* sched_display(struct XBTVEd const* xbtved);
 
   unsigned int buffers_len(struct XBTVEd const* xbtved);
 
@@ -29,8 +30,10 @@ extern "C" {
   void set_buffer_name(struct XBTVEd const* xbtved, char* name);
 
   void add_program(struct XBTVEd const* xbtved, char* src, char* loc);
+*/
 }
 
+/*
 namespace App{
     class XBTVEditor: public QObject
     {
@@ -56,4 +59,6 @@ namespace App{
         bool anyModified;
     };
 }
+*/
 #endif
+

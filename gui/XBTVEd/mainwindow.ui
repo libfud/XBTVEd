@@ -10,13 +10,15 @@
     <height>638</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Monospace</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>XBTVEd</string>
   </property>
-  <widget class="QWidget" name="centralWidget">
-   <zorder>horizontalScrollBar</zorder>
-   <zorder>graphicsView</zorder>
-  </widget>
+  <widget class="QWidget" name="centralWidget"/>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>

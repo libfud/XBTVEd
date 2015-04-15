@@ -222,8 +222,9 @@ impl<'a> XBTVEd {
         }
     }
 
-    pub fn open_file(&mut self, path: &Path) -> Result<(), Error> {
-        if let Some(idx) = self.buffers.iter().position(|ref edbuf| edbuf.get_path() == Some(path)) {
+    pub fn open_file(&mut self, path: &str) -> Result<(), Error> {
+        let pathname = Path::new(path);
+        if let Some(idx) = self.buffers.iter().position(|ref edbuf| edbuf.get_path() == Some(&pathname)) {
             self.current_buffer = idx;
             return Ok(())
         }
@@ -237,7 +238,7 @@ impl<'a> XBTVEd {
         };
 
         let mut buffer = EdBuffer::from_schedule(&sched);
-        buffer.set_path(path);
+        buffer.set_path(pathname);
         self.buffers.push(buffer);
         self.current_buffer += 1;
 

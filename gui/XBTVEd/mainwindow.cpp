@@ -3,9 +3,9 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QCloseEvent>
-#include <QLabel>
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <iostream>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -16,37 +16,43 @@ MainWindow::MainWindow(QWidget *parent) :
     createMenus();
     createToolBars();
 
-    xbtveditor = new App::XBTVEditor;
-    //std::string temp = xbtveditor->getSchedule();
-    //QLabel temporary = new QLabel::(temp.c_str())
-    //templabel = temporary
-    //setCentralWidget(templabel);
+ //   xbtveditor = new App::XBTVEditor;
+  //  std::string temp = xbtveditor->getSchedule();
+//    templabel = new QLabel(this);
+//    templabel->setText(temp.c_str());
+ //   setCentralWidget(templabel);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
-    delete xbtveditor;
+  //  delete xbtveditor;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    event->accept();
+    /*
     if (maybeSave()) {
         xbtveditor->saveAll();
         event->accept();
     } else {
         event->accept();
-    }
+    }*/
 }
 
+/*
 void MainWindow::newFile()
 {
     xbtveditor->newSchedule();
 }
+*/
 
+/*
 void MainWindow::open()
 {
     QString fileName = QFileDialog::getOpenFileName(this);
+    std::cout << fileName.toUtf8().constData() << "\n";
     if (!fileName.isEmpty()) {
         xbtveditor->loadFile(fileName);
     }
@@ -62,7 +68,7 @@ bool MainWindow::saveAs()
     }
 }
 
-bool MainWindow::save()
+bool MainWindow::saveBuffer()
 {
     return xbtveditor->saveFile();
 }
@@ -92,29 +98,31 @@ void MainWindow::buffersModified()
 {
     setWindowModified(xbtveditor->anyBufModified());
 }
+*/
 
 void MainWindow::createActions()
 {
-    newAct = new QAction(QIcon(":/images/new.png"), tr("&New"), this);
+    /*
+    newAct = new QAction(QIcon(":/assets/new.png"), tr("&New"), this);
     newAct->setShortcuts(QKeySequence::New);
     newAct->setStatusTip(tr("Create a new schedule"));
     connect(newAct, SIGNAL(triggered()), this, SLOT(newFile()));
 
-    openAct = new QAction(QIcon(":/images/open.png"), tr("&Open..."), this);
+    openAct = new QAction(QIcon(":/assets/open.png"), tr("&Open..."), this);
     openAct->setShortcuts(QKeySequence::Open);
     openAct->setStatusTip(tr("Open an existing file"));
     connect(openAct, SIGNAL(triggered()), this, SLOT(open()));
 
-    saveAct = new QAction(QIcon(":/images/save.png"), tr("&Save"), this);
+    saveAct = new QAction(QIcon(":/assets/save.png"), tr("&Save"), this);
     saveAct->setShortcuts(QKeySequence::Save);
     saveAct->setStatusTip(tr("Save this schedule."));
-    connect(saveAct, SIGNAL(triggered()), this, SLOT(save()));
+    connect(saveAct, SIGNAL(triggered()), this, SLOT(saveBuffer()));
 
-    exitAct = new QAction(QIcon(":/images/exit.png"), tr("&Exit"), this);
+    exitAct = new QAction(tr("&Exit"), this);
     exitAct->setShortcut(QKeySequence::Quit);
-    connect(exitAct, SIGNAL(triggered()), this, SLOT(quit()));
+    connect(exitAct, SIGNAL(triggered()), this, SLOT(close()));
 
-    saveAsAct = new QAction(QIcon(":/images/saveas.png"), tr("&Save as..."), this);
+    saveAsAct = new QAction(tr("&Save as..."), this);
     saveAsAct->setStatusTip(tr("Save this schedule as another file"));
     connect(saveAsAct, SIGNAL(triggered()), this, SLOT(saveAs()));
 
@@ -122,11 +130,11 @@ void MainWindow::createActions()
     saveAllAct->setStatusTip(tr("Save all modified buffers"));
     connect(saveAllAct, SIGNAL(triggered()), this, SLOT(saveAll()));
 
-    undoAct = new QAction(QIcon(":/images/undo.png"), tr("&Undo"), this);
+    undoAct = new QAction(QIcon(":/assets/undo.png"), tr("&Undo"), this);
     undoAct->setShortcuts(QKeySequence::Undo);
     connect(undoAct, SIGNAL(triggered()), this, SLOT(undo()));
 
-    redoAct = new QAction(QIcon(":/images/redo.png"), tr("&Redo"), this);
+    redoAct = new QAction(QIcon(":/assets/redo.png"), tr("&Redo"), this);
     redoAct->setShortcut(QKeySequence::Redo);
     connect(redoAct, SIGNAL(triggered()), this, SLOT(redo()));
 
@@ -135,22 +143,25 @@ void MainWindow::createActions()
 
     aboutQtAct = new QAction(tr("About &Qt"), this);
     connect(aboutQtAct, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
+*/
 }
 
 void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
-    fileMenu->addAction(newAct);
+ //   fileMenu->addAction(newAct);
+ /*
     fileMenu->addAction(openAct);
     fileMenu->addAction(saveAct);
     fileMenu->addAction(saveAsAct);
     fileMenu->addAction(saveAllAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
+    */
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(undoAct);
-    editMenu->addAction(redoAct);
+   // editMenu->addAction(undoAct);
+   // editMenu->addAction(redoAct);
 
     schedMenu = menuBar()->addMenu(tr("&Schedule"));
     progMenu = menuBar()->addMenu(tr("Program"));
@@ -159,22 +170,23 @@ void MainWindow::createMenus()
     menuBar()->addSeparator();
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
-    helpMenu->addAction(aboutAct);
-    helpMenu->addAction(aboutQtAct);
+ //   helpMenu->addAction(aboutAct);
+ //   helpMenu->addAction(aboutQtAct);
 }
 
 void MainWindow::createToolBars()
 {
     fileToolBar = addToolBar(tr("File"));
-    fileToolBar->addAction(newAct);
-    fileToolBar->addAction(openAct);
-    fileToolBar->addAction(saveAct);
+//    fileToolBar->addAction(newAct);
+//    fileToolBar->addAction(openAct);
+//    fileToolBar->addAction(saveAct);
 
     editToolBar = addToolBar(tr("Edit"));
-    editToolBar->addAction(undoAct);
-    editToolBar->addAction(redoAct);
+   // editToolBar->addAction(undoAct);
+  //  editToolBar->addAction(redoAct);
 }
 
+/*
 bool MainWindow::maybeSave()
 {
     if (xbtveditor->anyBufModified()) {
@@ -184,10 +196,11 @@ bool MainWindow::maybeSave()
                                       "Do you want to save changes?"),
                                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
         if (ret == QMessageBox::Save) {
-            return save();
+            return saveBuffer();
         } else if (ret == QMessageBox::Cancel) {
             return false;
         }
     }
     return true;
 }
+*/

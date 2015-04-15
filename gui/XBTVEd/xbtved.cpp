@@ -1,4 +1,4 @@
-#include "xbtved.h"
+/*#include "xbtved.h"
 
 App::XBTVEditor::XBTVEditor(void)
 {
@@ -57,4 +57,4 @@ void App::XBTVEditor::unDo(void)
 void App::XBTVEditor::reDo(void)
 {
     redo(xbtved);
-}
+}*/
