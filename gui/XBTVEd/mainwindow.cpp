@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createMenus();
     createToolBars();
 
- //   xbtveditor = new App::XBTVEditor;
+    xbtveditor = new App::XBTVEditor;
   //  std::string temp = xbtveditor->getSchedule();
 //    templabel = new QLabel(this);
 //    templabel->setText(temp.c_str());
@@ -26,29 +26,25 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
-  //  delete xbtveditor;
+    delete xbtveditor;
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    event->accept();
-    /*
     if (maybeSave()) {
         xbtveditor->saveAll();
         event->accept();
     } else {
         event->accept();
-    }*/
+    }
 }
 
-/*
+
 void MainWindow::newFile()
 {
     xbtveditor->newSchedule();
 }
-*/
 
-/*
 void MainWindow::open()
 {
     QString fileName = QFileDialog::getOpenFileName(this);
@@ -98,11 +94,9 @@ void MainWindow::buffersModified()
 {
     setWindowModified(xbtveditor->anyBufModified());
 }
-*/
 
 void MainWindow::createActions()
 {
-    /*
     newAct = new QAction(QIcon(":/assets/new.png"), tr("&New"), this);
     newAct->setShortcuts(QKeySequence::New);
     newAct->setStatusTip(tr("Create a new schedule"));
@@ -143,25 +137,22 @@ void MainWindow::createActions()
 
     aboutQtAct = new QAction(tr("About &Qt"), this);
     connect(aboutQtAct, SIGNAL(triggered()), qApp, SLOT(aboutQt()));
-*/
 }
 
 void MainWindow::createMenus()
 {
     fileMenu = menuBar()->addMenu(tr("&File"));
- //   fileMenu->addAction(newAct);
- /*
+    fileMenu->addAction(newAct);
     fileMenu->addAction(openAct);
     fileMenu->addAction(saveAct);
     fileMenu->addAction(saveAsAct);
     fileMenu->addAction(saveAllAct);
     fileMenu->addSeparator();
     fileMenu->addAction(exitAct);
-    */
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
-   // editMenu->addAction(undoAct);
-   // editMenu->addAction(redoAct);
+    editMenu->addAction(undoAct);
+    editMenu->addAction(redoAct);
 
     schedMenu = menuBar()->addMenu(tr("&Schedule"));
     progMenu = menuBar()->addMenu(tr("Program"));
@@ -170,23 +161,22 @@ void MainWindow::createMenus()
     menuBar()->addSeparator();
 
     helpMenu = menuBar()->addMenu(tr("&Help"));
- //   helpMenu->addAction(aboutAct);
- //   helpMenu->addAction(aboutQtAct);
+    helpMenu->addAction(aboutAct);
+    helpMenu->addAction(aboutQtAct);
 }
 
 void MainWindow::createToolBars()
 {
     fileToolBar = addToolBar(tr("File"));
-//    fileToolBar->addAction(newAct);
-//    fileToolBar->addAction(openAct);
-//    fileToolBar->addAction(saveAct);
+    fileToolBar->addAction(newAct);
+    fileToolBar->addAction(openAct);
+    fileToolBar->addAction(saveAct);
 
     editToolBar = addToolBar(tr("Edit"));
-   // editToolBar->addAction(undoAct);
-  //  editToolBar->addAction(redoAct);
+    editToolBar->addAction(undoAct);
+    editToolBar->addAction(redoAct);
 }
 
-/*
 bool MainWindow::maybeSave()
 {
     if (xbtveditor->anyBufModified()) {
@@ -203,4 +193,3 @@ bool MainWindow::maybeSave()
     }
     return true;
 }
-*/

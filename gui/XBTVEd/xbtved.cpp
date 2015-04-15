@@ -1,4 +1,4 @@
-/*#include "xbtved.h"
+#include "xbtved.h"
 
 App::XBTVEditor::XBTVEditor(void)
 {
@@ -17,7 +17,7 @@ void App::XBTVEditor::newSchedule(void)
 
 std::string App::XBTVEditor::getSchedule(void)
 {
-    char* sched = sched_display(xbtved);
+    const char* sched = sched_display(xbtved);
     return sched;
 }
 
@@ -57,4 +57,4 @@ void App::XBTVEditor::unDo(void)
 void App::XBTVEditor::reDo(void)
 {
     redo(xbtved);
-}*/
+}

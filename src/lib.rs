@@ -7,19 +7,17 @@ extern crate libc;
 use std::ffi::{CStr, CString};
 use std::mem;
 
-pub mod action;
-pub mod parse;
-pub mod schedule;
-pub mod program;
-pub mod tags;
-pub mod blocks;
-pub mod gui;
+mod action;
+mod parse;
+mod schedule;
+mod program;
+mod tags;
+mod blocks;
+mod gui;
 
-pub use gui::XBTVEd;
+use gui::XBTVEd;
 use action::*;
 
-/*
-#[no_mangle]
 fn ptr_to_string(name: *const libc::c_char) -> String {
     unsafe {
         let temp = CStr::from_ptr(name);
@@ -29,9 +27,9 @@ fn ptr_to_string(name: *const libc::c_char) -> String {
         }
     }
 }
-*/
+
 #[no_mangle]
-pub extern fn create_app() -> *const XBTVEd {
+pub extern fn create_app() -> *mut XBTVEd {
     let app = Box::new(XBTVEd::new());
     unsafe {
         mem::transmute(app)
@@ -108,12 +106,7 @@ pub extern fn get_buffer_name(xbtved: *const XBTVEd) -> *const i8 {
 #[no_mangle]
 pub extern fn set_buffer_name(xbtved: *mut XBTVEd, name: *const libc::c_char) {
     unsafe {
-//        let new_name = ptr_to_string(name);
-        let temp = CStr::from_ptr(name);
-        let new_name = match String::from_utf8(temp.to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
-        };
+        let new_name = ptr_to_string(name);
 
         let name_change = SetName::new((*xbtved).current_buffer(), &new_name);
         if let Err(f) = (*xbtved).current_buffer_mut().apply(name_change) {
@@ -127,26 +120,9 @@ pub extern fn add_program(xbtved: *mut XBTVEd,
                           src: *const libc::c_char, 
                           loc: *const libc::c_char) -> *const i8 {
     unsafe {
-//        let location = ptr_to_string(loc);
-        let temp = CStr::from_ptr(loc);
-        let location = match String::from_utf8(temp.to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
-        };
+        let location = ptr_to_string(loc);
 
-/*        let source = match ptr_to_string(source).as_str() {
-            "local" => program::Source::Pathname(location),
-            "network" => program::Source::URL(location),
-            x => return CString::new(format!("{} is invalid source", x)).unwrap().as_ptr()
-        };
-*/
-        let temp = CStr::from_ptr(src);
-        let temp_source = match String::from_utf8(temp.to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
-        };
-
-        let source = match temp_source.as_str() {
+        let source = match ptr_to_string(src).as_str() {
             "local" => program::Source::Pathname(location),
             "network" => program::Source::URL(location),
             x => return CString::new(format!("{} is invalid source", x)).unwrap().as_ptr()
@@ -192,13 +168,7 @@ pub extern fn save(xbtved: *mut XBTVEd) -> bool {
 #[no_mangle]
 pub extern fn save_as(xbtved: *mut XBTVEd, name: *const libc::c_char) -> bool {
     unsafe {
-//        let path = ptr_to_string(name);
-        let temp = CStr::from_ptr(name);
-        let path = match String::from_utf8(temp.to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
-        };
-
+        let path = ptr_to_string(name);
         match (*xbtved).save_as(&path) {
             Ok(_) => true,
             Err(f) => {
@@ -211,20 +181,14 @@ pub extern fn save_as(xbtved: *mut XBTVEd, name: *const libc::c_char) -> bool {
 
 #[no_mangle]
 pub extern fn open(xbtved: *mut XBTVEd, name: *const libc::c_char) {
-/*    unsafe {
-//        let path = ptr_to_string(name);
-        let temp = CStr::from_ptr(name);
-        let path = match String::from_utf8(temp.to_bytes().to_vec()) {
-            Ok(x) => x,
-            Err(f) => panic!(f)
-        };
+    unsafe {
+        let path = ptr_to_string(name);
 
         match (*xbtved).open_file(&path) {
             Ok(_) => { },
             Err(f) => println!("{}", f)
         }
     }
-    */
 }
 
 #[no_mangle]

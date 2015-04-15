@@ -5,7 +5,7 @@
 #include <QString>
 
 extern "C" {
-/*  struct XBTVEd;
+  struct XBTVEd;
   struct XBTVEd const* create_app();
   void destroy_app(struct XBTVEd const* xbtved);
 
@@ -30,10 +30,9 @@ extern "C" {
   void set_buffer_name(struct XBTVEd const* xbtved, char* name);
 
   void add_program(struct XBTVEd const* xbtved, char* src, char* loc);
-*/
+
 }
 
-/*
 namespace App{
     class XBTVEditor: public QObject
     {
@@ -54,11 +53,14 @@ namespace App{
     signals:
         void bufModified(void);
 
+    private slots:
+
+
     private:
         XBTVEd const* xbtved;
         bool anyModified;
     };
 }
-*/
+
 #endif
 
