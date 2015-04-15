@@ -1,2 +1,5 @@
-<RCC/>
-
+<RCC>
+    <qresource prefix="/assets">
+        <file>assets/NotoSans-Regular.ttf</file>
+    </qresource>
+</RCC>
