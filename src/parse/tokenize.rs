@@ -15,6 +15,7 @@ impl<T, U: Clone> TokenStream<T, U> {
         TokenStream { expr: e, index: 0, rules: rules, /*tokens: tokens, */on_err: on_err }
     }
 
+/*
     pub fn peek(&self) -> Option<Result<T, U>> {
         self.peek_helper(0)
     }
@@ -32,6 +33,7 @@ impl<T, U: Clone> TokenStream<T, U> {
             }
         }
     }
+*/
 
     pub fn rev(&mut self, i: usize) -> Result<(), ()> {
         if self.index >= i {

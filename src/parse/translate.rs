@@ -48,7 +48,26 @@ pub fn get_location(tokens: &mut TokenStream<Token, ParseError>) -> Result<Sourc
 
 pub fn get_tags(tokens: &mut TokenStream<Token, ParseError>) -> Result<Tags, ParseError> {
     try!(begin_expr(tokens));
-    match try!(strip(tokens.next())) {
+    if let Some(&Ok(Tag)) = tokens.peekable().peek() {
+        try!(strip(tokens.next()));
+        let mut tags = Tags::new();
+        loop {
+            match try!(strip(tokens.next())) {
+                TagData(ref x, ref y) => {
+                    try!(tags.modify_tag(x, y));
+                },
+                RParen => break,
+                x => return Err(BadToken(format!("Expected rparen, found {}", x)))
+            }
+        }
+        Ok(tags)
+    } else {
+        if let Err(_) = tokens.rev(1) {
+            panic!("Unexpected truncation of string!")
+        }
+        Ok(Tags::new())
+    }
+/*    match try!(strip(tokens.next())) {
         Tag => {
             let mut tags = Tags::new();
             loop {
@@ -68,7 +87,7 @@ pub fn get_tags(tokens: &mut TokenStream<Token, ParseError>) -> Result<Tags, Par
                 Err(()) => panic!("Unexpected truncation of string!")
             }
         }
-    }
+    }*/
 }
 
 pub fn play_handler(tokens: &mut TokenStream<Token, ParseError>) -> Result<Instruction, ParseError> {
