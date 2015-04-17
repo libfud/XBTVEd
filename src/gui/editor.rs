@@ -1,13 +1,14 @@
+use std::cmp;
+use std::num::ToPrimitive;
 use std::io::{Error, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use super::schedule::Schedule;
-use super::program::Program;
-use super::action::{
-    Action,
-};
+use super::super::schedule::Schedule;
+use super::super::program::Program;
+use super::super::action::Action;
 
-#[repr(C)]
+static WORDMULTIPLE: f64 = 11.0;
+
 pub struct EdBuffer {
     schedule: Schedule,
     filepath: Option<PathBuf>,
@@ -157,17 +158,33 @@ impl<'a> EdBuffer {
     }
 }
 
-#[repr(C)]
 pub struct XBTVEd {
     buffers: Vec<EdBuffer>,
     current_buffer: usize,
+    file_entries: Vec<String>,
+    file_entries_width: f64,
+    pub file_selected_idx: Option<usize>
 }
 
 impl<'a> XBTVEd {
     pub fn new() -> XBTVEd {
+        let file_entries = vec!("File".to_string(),
+                               "New".to_string(), 
+                               "Open".to_string(),
+                               "Save".to_string(),
+                               "Save as".to_string(),
+                                "Exit".to_string());
+
+        let file_longest = file_entries.iter()
+            .fold(0, |x, word| cmp::max(x, word.len()))
+            .to_f64().unwrap() * WORDMULTIPLE;
+
         XBTVEd {
             buffers: vec!(EdBuffer::new()),
             current_buffer: 0,
+            file_entries: file_entries,
+            file_entries_width: file_longest,
+            file_selected_idx: None
         }
     }
 
@@ -232,7 +249,7 @@ impl<'a> XBTVEd {
         let mut file = try!(File::open(path));
         let mut s = String::new();
         try!(file.read_to_string(&mut s));
-        let sched = match super::parse::parse(&s) {
+        let sched = match super::super::parse::parse(&s) {
             Ok(x) => x,
             Err(f) => return Err(Error::new(ErrorKind::Other, f.to_string().as_str()))
         };
@@ -276,5 +293,13 @@ impl<'a> XBTVEd {
 
     pub fn add_example(&mut self) {
         self.buffers.push(EdBuffer::new());
+    }
+
+    pub fn file_entries_mut(&'a mut self) -> &'a mut Vec<String> {
+        &mut self.file_entries
+    }
+
+    pub fn file_entries_width(&self) -> f64 {
+        self.file_entries_width
     }
 }

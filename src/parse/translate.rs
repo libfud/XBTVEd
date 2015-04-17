@@ -32,13 +32,13 @@ pub fn get_location(tokens: &mut TokenStream<Token, ParseError>) -> Result<Sourc
     let res = match try!(strip(tokens.next())) {
         Local => match try!(strip(tokens.next())) {
             Location(x) => Ok(Pathname(x)),
-            x => Err(BadToken(format!("{}{}", "Expected source for file, found ".to_string(), x))),
+            x => Err(BadToken(format!("Expected source for file, found {}", x)))
         },
         Network => match try!(strip(tokens.next())) {
             Location(x) => Ok(Pathname(x)),
-            x => Err(BadToken(format!("{}{}", "Expected source for file, found ".to_string(), x))),
+            x => Err(BadToken(format!("Expected source for file, found {}", x)))
         },
-        x => Err(BadToken(format!("{}{}", "Expected source for file, found ".to_string(), x)))
+        x => Err(BadToken(format!("Expected source for file, found {}", x)))
     };
     match try!(strip(tokens.next())) {
         RParen => res,
@@ -62,32 +62,14 @@ pub fn get_tags(tokens: &mut TokenStream<Token, ParseError>) -> Result<Tags, Par
         }
         Ok(tags)
     } else {
-        if let Err(_) = tokens.rev(1) {
-            panic!("Unexpected truncation of string!")
+        assert!(tokens.previous().is_some()); //don't care about that token.
+        match try!(strip(tokens.previous())) {
+            LParen => { },
+            x => panic!("Expected lparen when reversing tokenstream, found {}", x)
         }
+            
         Ok(Tags::new())
     }
-/*    match try!(strip(tokens.next())) {
-        Tag => {
-            let mut tags = Tags::new();
-            loop {
-                match try!(strip(tokens.next())) {
-                    TagData(ref x, ref y) => {
-                        try!(tags.modify_tag(x, y));
-                    },
-                    RParen => break,
-                    x => return Err(BadToken(format!("{}{}", "Expected rparen, found ".to_string(), x)))
-                }
-            }
-            Ok(tags)
-        },
-        _ => {
-            match tokens.rev(2) {
-                Ok(()) => Ok(Tags::new()),
-                Err(()) => panic!("Unexpected truncation of string!")
-            }
-        }
-    }*/
 }
 
 pub fn play_handler(tokens: &mut TokenStream<Token, ParseError>) -> Result<Instruction, ParseError> {
@@ -187,7 +169,7 @@ pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
                                                        "Expected (, ), or Program but found ".to_string(),
                                                        x.to_string()))),
             Some(Err(f)) => return Err(f),
-            None => break
+            None => return Err(UnbalancedParens)
         }
     }
     Ok(Schedule::new(&name, progs))

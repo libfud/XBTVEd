@@ -1,4 +1,4 @@
-use super::gui::EdBuffer;
+use super::EdBuffer;
 use super::program::{Program, Source};
 
 pub trait Action {
