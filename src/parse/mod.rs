@@ -16,14 +16,14 @@ mod translate;
 pub enum Token {
     LParen,
     RParen,
+    Location(String),
+    Time(usize),
+    TagData(TagType, String),
     Instr,
     Play,
     Local,
     Network,
-    Location(String),
-    Time(usize),
     Tag,
-    TagData(TagType, String),
     Prog,
     Sched
 }
@@ -33,14 +33,14 @@ impl fmt::Display for Token {
         try!(write!(fmt, "{}", match *self {
             Token::LParen => "(".to_string(),
             Token::RParen => ")".to_string(),
+            Token::Location(ref x) => x.clone(),
+            Token::Time(x) => x.to_string(),
+            Token::TagData(ref x, ref y) => format!("{}=\"{}\"", x, y),
             Token::Instr => "instr".to_string(),
             Token::Play => "play".to_string(),
             Token::Local => "local".to_string(),
             Token::Network => "network".to_string(),
-            Token::Location(ref x) => x.clone(),
-            Token::Time(x) => x.to_string(),
-            Token::Tag => "tag".to_string(),
-            Token::TagData(ref x, ref y) => format!("{}=\"{}\"", x, y),
+            Token::Tag => "tag".to_string(), 
             Token::Prog => "program".to_string(),
             Token::Sched => "schedule".to_string()
         }));
@@ -133,16 +133,15 @@ pub fn is_location(expr: &str) -> MaybeToken<Token, ParseError> {
         /* c == '"' is kind of a bad assumption, but I haven't really encountered *
          * many quotes in filenames. I should probably come back and try to find  *
          * a better solution later.
-         * Another failure case, although unlikely, is double quotes in URLs. */
+         * Another failure case, although unlikely, is double quotes in URLs.
+         * However, those are illegal characters and _should_ cause an error anyway.*/
 
         let close = match expr[1..].find('"') {
             Some(x) => x + 1,
             None => return (Some(Err(ParseError::BadToken("Cannot find closing quote!".to_string()))), 0)
         };
-        /* Close is an indexed position, but it's also offset by one since we skip the first *
-         * character in the string. */
         let location = expr[1 .. close].to_string();
-        let advance = location.len() + 2; //quotation marks
+        let advance = close + 1;
         (Some(Ok(Token::Location(location))), advance)
     } else {
         (None, 0)

@@ -2,7 +2,7 @@
 
 pub type MaybeToken<T, U> = (Option<Result<T, U>>, usize);
 
-pub struct TokenStream<T, U> {
+pub struct TokenStream<T: Clone, U: Clone> {
     expr: String,
     fwd_index: usize,
     rev_index: usize,
@@ -11,7 +11,7 @@ pub struct TokenStream<T, U> {
     on_exhaustion: U,
 }
 
-impl<T, U: Clone> TokenStream<T, U> {
+impl<T: Clone, U: Clone> TokenStream<T, U> {
     pub fn new(e: &str, 
                next_rules: Vec<fn(&str) -> MaybeToken<T, U>>, 
                back_rules: Vec<fn(&str) -> MaybeToken<T, U>>,
@@ -43,8 +43,6 @@ impl<T, U: Clone> TokenStream<T, U> {
         if self.fwd_index == 0 {
             return None
         } else {
-//            let temp = self.expr.chars().take(self.fwd_index).collect::<String>();
-//            if temp.chars().rev().next().unwrap().is_whitespace() {
             if self.expr[.. self.fwd_index].ends_with(|c: char| c.is_whitespace()) {
                 self.fwd_index -= 1;
                 self.previous()
@@ -58,14 +56,13 @@ impl<T, U: Clone> TokenStream<T, U> {
 
 }
 
-impl<T, U: Clone> Iterator for TokenStream<T, U> {
+impl<T: Clone, U: Clone> Iterator for TokenStream<T, U> {
     type Item = Result<T, U>;
 
     fn next(&mut self) -> Option<Result<T, U>> {
         if self.fwd_index == self.expr.len() {
             return None
         } else {
-//            if self.expr.chars().skip(self.fwd_index).next().unwrap().is_whitespace() {
             if self.expr[self.fwd_index ..].starts_with(|c: char| c.is_whitespace()) {
                 self.fwd_index += 1;
                 self.next()
@@ -76,30 +73,18 @@ impl<T, U: Clone> Iterator for TokenStream<T, U> {
             }
         }
     }
-
-    //returns the lowest amount of possible remaining tokens,
-    //and the most possible remaining tokens
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.fwd_index == self.expr.len() {
-            (0, None)
-        } else {
-            (1, Some(self.expr.len() - self.fwd_index))
-        }
-    }
 }
 
-impl<T, U: Clone> DoubleEndedIterator for TokenStream<T, U> {
+impl<T: Clone, U: Clone> DoubleEndedIterator for TokenStream<T, U> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.rev_index == 0 {
             return None
         } else {
-            let temp = self.expr.chars().take(self.rev_index).collect::<String>();
-            if temp.chars().rev().next().unwrap().is_whitespace() {
+            if self.expr[..self.rev_index].ends_with(|c: char| c.is_whitespace()) {
                 self.rev_index -= 1;
                 self.next_back()
             } else {
-                let temp = self.expr.chars().take(self.rev_index).collect::<String>();
-                let (token, len) = analyze(&temp, &self.back_rules, &self.on_exhaustion);
+                let (token, len) = analyze(&self.expr[.. self.rev_index], &self.back_rules, &self.on_exhaustion);
                 self.rev_index -= len;
                 token
             }
