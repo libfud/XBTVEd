@@ -16,9 +16,10 @@ mod translate;
 pub enum Token {
     LParen,
     RParen,
-    Location(String),
+    Data(String),
     Time(usize),
-    TagData(TagType, String),
+    TagKind(TagType),
+    List,
     Instr,
     Play,
     Local,
@@ -33,9 +34,10 @@ impl fmt::Display for Token {
         try!(write!(fmt, "{}", match *self {
             Token::LParen => "(".to_string(),
             Token::RParen => ")".to_string(),
-            Token::Location(ref x) => x.clone(),
+            Token::Data(ref x) => format!("\"{}\"", x),
             Token::Time(x) => x.to_string(),
-            Token::TagData(ref x, ref y) => format!("{}=\"{}\"", x, y),
+            Token::TagKind(ref x) => x.to_string(),
+            Token::List => "list".to_string(),
             Token::Instr => "instr".to_string(),
             Token::Play => "play".to_string(),
             Token::Local => "local".to_string(),
@@ -89,7 +91,9 @@ pub fn is_paren_rev(expr: &str) -> MaybeToken<Token, ParseError> {
 }
 
 pub fn is_keyword(expr: &str) -> MaybeToken<Token, ParseError> {
-    if expr.starts_with("tags ") {
+    if expr.starts_with("list ") {
+        (Some(Ok(Token::List)), 4)
+    } else if expr.starts_with("tags ") {
         (Some(Ok(Token::Tag)), 4)
     } else if expr.starts_with("play") { 
         (Some(Ok(Token::Play)), 4)
@@ -109,7 +113,9 @@ pub fn is_keyword(expr: &str) -> MaybeToken<Token, ParseError> {
 }
 
 pub fn is_keyword_rev(expr: &str) -> MaybeToken<Token, ParseError> {
-    if expr.ends_with("tags") {
+    if expr.ends_with("list") {
+        (Some(Ok(Token::List)), 4)
+    } else if expr.ends_with("tags") {
         (Some(Ok(Token::Tag)), 4)
     } else if expr.ends_with("play") { 
         (Some(Ok(Token::Play)), 4)
@@ -128,7 +134,7 @@ pub fn is_keyword_rev(expr: &str) -> MaybeToken<Token, ParseError> {
     }
 }
 
-pub fn is_location(expr: &str) -> MaybeToken<Token, ParseError> {
+pub fn is_data(expr: &str) -> MaybeToken<Token, ParseError> {
     if expr.starts_with("\"") {
         /* c == '"' is kind of a bad assumption, but I haven't really encountered *
          * many quotes in filenames. I should probably come back and try to find  *
@@ -142,13 +148,13 @@ pub fn is_location(expr: &str) -> MaybeToken<Token, ParseError> {
         };
         let location = expr[1 .. close].to_string();
         let advance = close + 1;
-        (Some(Ok(Token::Location(location))), advance)
+        (Some(Ok(Token::Data(location))), advance)
     } else {
         (None, 0)
     }
 }
 
-pub fn is_location_rev(expr: &str) -> MaybeToken<Token, ParseError> {
+pub fn is_data_rev(expr: &str) -> MaybeToken<Token, ParseError> {
     if expr.ends_with("\"") {
         let close = match expr[..expr.len() - 1].rfind('"') {
             Some(x) => x + 1,
@@ -157,7 +163,7 @@ pub fn is_location_rev(expr: &str) -> MaybeToken<Token, ParseError> {
 
         let location = expr[close .. expr.len() - 1].to_string();
         let advance = location.len() + 2;
-        (Some(Ok(Token::Location(location))), advance)
+        (Some(Ok(Token::Data(location))), advance)
     } else {
         (None, 0)
     }
@@ -165,13 +171,12 @@ pub fn is_location_rev(expr: &str) -> MaybeToken<Token, ParseError> {
 
 #[test]
 fn loc_rev_test() {
-    assert!(is_location_rev("(foo \"bar\"") == (Some(Ok(Token::Location("bar".to_string()))), 5));
-    assert!(is_location_rev("(foo bar\"") == (Some(Err(ParseError::BadToken(
+    assert!(is_data_rev("(foo \"bar\"") == (Some(Ok(Token::Data("bar".to_string()))), 5));
+    assert!(is_data_rev("(foo bar\"") == (Some(Err(ParseError::BadToken(
         "Cannot find closing quote!".to_string()))), 0));
-    assert!(is_location_rev("foo bar") == (None, 0));
+    assert!(is_data_rev("foo bar") == (None, 0));
 }
 
-//USE REGEX /..:.....:/ 
 pub fn is_time(expr: &str) -> MaybeToken<Token, ParseError> {
     let re = match Regex::new(r"^\d{2}:\d{2}:\d{2}") {
         Ok(re) => re,
@@ -236,95 +241,35 @@ fn time_rev_test() {
     assert!(is_time_rev("(play 01:30:05") == (Some(Ok(Token::Time(90 * 60 + 5))), 8));
 }
 
-pub fn is_tagdata(expr: &str) -> MaybeToken<Token, ParseError> {
-    let eq_pos = match expr.find('=') {
-        Some(x) => x,
-        None => return (None, 0)
-    };
-
-    let tagname = match expr[..eq_pos].parse::<TagType>() {
-        Ok(x) => x,
-        Err(_) => return (Some(Err(ParseError::BadToken("Badly formatted tag.".to_string()))), 0)
-    };
-
-    let rest = expr[eq_pos + 1 ..].to_string();
-    if rest.starts_with("\"") {
-        let close = match rest[1 ..].find('"') {
-            Some(x) => x + 1,
-            None => return (Some(Err(ParseError::BadToken("Cannot find closing quote!".to_string()))), 0)
-        };
-        
-        let tagdata = rest[1 .. close].to_string();
-        let advance = tagdata.len() + 2 + eq_pos + 1; //two double quotes, and add one for index of =
-        (Some(Ok(Token::TagData(tagname, tagdata))), advance)
+pub fn is_tag(expr: &str) -> MaybeToken<Token, ParseError> {
+    if expr.starts_with(":") {
+        match expr.find(|c: char| c.is_whitespace()) {
+            Some(x) => match expr[1..x].parse::<TagType>() {
+                Ok(tagtype) => (Some(Ok(Token::TagKind(tagtype))), x),
+                Err(_) => (Some(Err(ParseError::BadToken(format!("Badly formatted tag. {}", expr)))), 0)
+            },
+            None => (Some(Err(ParseError::BadToken(format!("Badly formatted tag. {}", expr)))), 0)
+        }
     } else {
-        (Some(Err(ParseError::BadToken("Empty tags are not permitted".to_string()))), 0)
+        (None, 0)
     }
 }
 
-pub fn is_tagdata_rev(expr: &str) -> MaybeToken<Token, ParseError> {
-    if !expr.ends_with('"')  {
-        return (None, 0)
-    }
-
-    let tag_end = match expr.rfind("=\"") {
-        Some(x) => x,
-        None => return (None, 0)
-    };
-
-    let tag_begin = match expr[..tag_end].rfind(|c: char| c.is_whitespace()) {
-        Some(x) => x + 1,
-        None => return (Some(Err(ParseError::BadToken("Badly formatted tag.".to_string()))), 0)
-    };
-
-    let tagdata_begin = tag_end + 2;
-    let tagtype = match expr[tag_begin .. tag_end].parse::<TagType>() {
-        Ok(x) => x,
-        Err(_) => return (Some(Err(ParseError::BadToken("Badly formatted tag.".to_string()))), 0)
-    };
-    let tagdata = expr[tagdata_begin .. expr.len() - 1].to_string();
-    (Some(Ok(Token::TagData(tagtype, tagdata))), expr.len() - tag_begin + 1)
-}
-
-#[test]
-fn tag_rev() {
-    let (tagoption, idx) = is_tagdata_rev("what director=\"Foo Bar\"");
-    if tagoption.is_none() {
-        panic!("Uh oh")
-    }
-
-    if idx != 19 {
-        panic!(format!("Expected 19, got {}", idx))
-    }
-
-    let taginfos = tagoption.unwrap();
-
-    match taginfos {
-        Ok(Token::TagData(tagtype, x)) => {
-            if tagtype != TagType::Director {
-                panic!(format!("Expected director, found {}", tagtype))
-            }
-            
-            if x != "Foo Bar".to_string() { 
-                panic!(x) 
-            }
+pub fn is_tag_rev(expr: &str) -> MaybeToken<Token, ParseError> {
+    match expr.rfind(|c: char| c == ':') {
+        Some(x) => match expr[x + 1..].parse::<TagType>() {
+            Ok(tagtype) => (Some(Ok(Token::TagKind(tagtype))), x),
+            Err(_) => (Some(Err(ParseError::BadToken("Badly formatted tag.".to_string()))), 0)
         },
-        Ok(x) => panic!(format!("Expected Tagdata, found {},", x)),
-        Err(f) => panic!(f)
-    }
-    let full = "what director=\"Foo Bar\"".to_string();
-    let clipped = full[.. full.len() - idx].to_string();
-    let what = "what".to_string();
-    if clipped != what {
-        panic!(clipped)
+        None => (None, 0)
     }
 }
 
 pub fn parse(s: &str) -> Result<Schedule, ParseError> {
     let next_rules: Vec<fn(&str) -> MaybeToken<Token, ParseError>> = 
-        vec!(is_paren, is_keyword, is_location, is_time, is_tagdata);
+        vec!(is_paren, is_keyword, is_data, is_time, is_tag);
     let back_rules: Vec<fn(&str) -> MaybeToken<Token, ParseError>> =
-        vec!(is_paren_rev, is_keyword_rev, is_location_rev, is_time_rev, is_tagdata_rev);
+        vec!(is_paren_rev, is_keyword_rev, is_data_rev, is_time_rev, is_tag);
 
     let mut tokens = TokenStream::new(s, next_rules, back_rules,
                                       ParseError::BadToken("Unrecognized token".to_string()));
@@ -336,11 +281,11 @@ pub fn parse(s: &str) -> Result<Schedule, ParseError> {
 #[test]
 fn toy_example() {
     let should_work = 
-"(schedule \"foo\" (program (local \"foo\") (tags director=\"Bar Baz\")
+"(schedule \"foo\" (program (local \"foo\") (tags :director \"Bar Baz\")
  (instr (play 00:00:00 00:00:00))))";
 
     let schedule_failure1 = 
-"(sked \"foo\" (program (local \"foo\") (tags director=\"Bar Baz\")
+"(sked \"foo\" (program (local \"foo\") (tags :director \"Bar Baz\")
  (instr (play 00:00:00 00:00:00))))";
 
     let schedule_failure2 = 
@@ -348,36 +293,43 @@ fn toy_example() {
  (instr (play 00:00:00 00:00:00))))";
 
     let missing_paren_failure1 =
-"(schedule \"foo\" (program (local \"foo\") (tags director=\"Bar Baz\")
+"(schedule \"foo\" (program (local \"foo\") (tags :director \"Bar Baz\")
  (instr (play 00:00:00 00:00:00)))";
 
     let missing_paren_failure2 =
-"(schedule \"foo\" (program (local \"foo\") (tags director=\"Bar Baz\")
+"(schedule \"foo\" (program (local \"foo\") (tags :director \"Bar Baz\")
  (instr play 00:00:00 00:00:00))))"; 
         
     let bad_tag_failure = 
-"(schedule \"foo\" (program (local \"foo\") (tags dierekteur=\"Bar Baz\")
+"(schedule \"foo\" (program (local \"foo\") (tags :dierekteur \"Bar Baz\")
  (instr (play 00:00:00 00:00:00))))";
 
     let no_tags = 
 "(schedule \"foo\" (program (local \"foo\") (instr (play 00:00:00 00:00:00))))";
+
+    let should_work2 = 
+"(schedule \"foo\" (program (local \"foo\")
+ (tags :director \"Bar Baz\" :cast (list \"Foo\" \"Bar\" \"Baz\"))
+ (instr (play 00:00:00 00:00:00))))";
 
 
     if let Err(f) = parse(should_work) {
         println!("{}", f);
         panic!(f)
     }
-    assert!(parse(should_work).is_ok() == true);
+    assert!(parse(should_work).is_ok() );
 
-    assert!(parse(schedule_failure1).is_err() == true);
+    assert!(parse(schedule_failure1).is_err() );
 
-    assert!(parse(schedule_failure2).is_err() == true);
+    assert!(parse(schedule_failure2).is_err() );
 
-    assert!(parse(missing_paren_failure1).is_err() == true);
+    assert!(parse(missing_paren_failure1).is_err() );
 
-    assert!(parse(missing_paren_failure2).is_err() == true);
+    assert!(parse(missing_paren_failure2).is_err() );
 
-    assert!(parse(bad_tag_failure).is_err() == true);
+    assert!(parse(bad_tag_failure).is_err() );
+
+    assert!(parse(should_work2).is_ok());
 
     if let Err(f) =  parse(no_tags) {
         panic!(f)

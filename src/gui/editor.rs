@@ -1,13 +1,21 @@
-use std::cmp;
-use std::num::ToPrimitive;
+extern crate conrod;
+extern crate opengl_graphics;
+
+use self::conrod::{
+    Drawable,
+    Positionable,
+    Ui
+};
+use self::opengl_graphics::GlGraphics;
+use self::opengl_graphics::glyph_cache::GlyphCache;
+
 use std::io::{Error, ErrorKind, Read, Write};
 use std::path::{Path, PathBuf};
 use std::fs::File;
+use super::menu::MenuBar;
 use super::super::schedule::Schedule;
 use super::super::program::Program;
 use super::super::action::Action;
-
-static WORDMULTIPLE: f64 = 11.0;
 
 pub struct EdBuffer {
     schedule: Schedule,
@@ -161,31 +169,38 @@ impl<'a> EdBuffer {
 pub struct XBTVEd {
     buffers: Vec<EdBuffer>,
     current_buffer: usize,
-    file_entries: Vec<String>,
-    file_entries_width: f64,
-    pub file_selected_idx: Option<usize>
+    menu_bar: MenuBar,
+    _width: f64,
+    exit_signal: bool
 }
 
 impl<'a> XBTVEd {
-    pub fn new() -> XBTVEd {
+    pub fn new(width: f64) -> XBTVEd {
         let file_entries = vec!("File".to_string(),
-                               "New".to_string(), 
-                               "Open".to_string(),
-                               "Save".to_string(),
-                               "Save as".to_string(),
+                                "New".to_string(), 
+                                "Open".to_string(),
+                                "Save".to_string(),
+                                "Save as".to_string(),
                                 "Exit".to_string());
 
-        let file_longest = file_entries.iter()
-            .fold(0, |x, word| cmp::max(x, word.len()))
-            .to_f64().unwrap() * WORDMULTIPLE;
+        let edit_entries = vec!("Edit".to_string(),
+                                "Undo".to_string(),
+                                "Redo".to_string());
+
+        let entries = vec!(file_entries, edit_entries);
+//        let methods = vec!(file_methods, edit_methods);
 
         XBTVEd {
             buffers: vec!(EdBuffer::new()),
             current_buffer: 0,
-            file_entries: file_entries,
-            file_entries_width: file_longest,
-            file_selected_idx: None
+            menu_bar: MenuBar::new(11.0, entries, width),
+            _width: width,
+            exit_signal: false,
         }
+    }
+
+    pub fn exit(&self) -> bool {
+        self.exit_signal
     }
 
     pub fn current_buffer(&'a self) -> &'a EdBuffer {
@@ -295,11 +310,33 @@ impl<'a> XBTVEd {
         self.buffers.push(EdBuffer::new());
     }
 
-    pub fn file_entries_mut(&'a mut self) -> &'a mut Vec<String> {
-        &mut self.file_entries
+    pub fn menu_bar_mut(&'a mut self) -> &'a mut MenuBar {
+        &mut self.menu_bar
     }
 
-    pub fn file_entries_width(&self) -> f64 {
-        self.file_entries_width
+    pub fn menu_bar(&'a self) -> &'a MenuBar {
+        &self.menu_bar
+    }
+
+    pub fn draw_menus(&mut self, gl: &mut GlGraphics, ui: &mut Ui<GlyphCache<'a>>) {
+        self.menu_bar.menu_mut(0).unwrap().draw(ui, gl);
+        if let Some(idx) = self.menu_bar.menu(0).unwrap().idx() {
+            match idx {
+                0 => { }, //File
+                1 => self.add_buffer(),
+                5 => self.exit_signal = true,
+                x => println!("{}", x)
+            }
+            self.menu_bar.menu_mut(0).unwrap().set_idx(None);
+        }
+
+        self.menu_bar.menu_mut(1).unwrap().draw(ui, gl);
+        if let Some(idx) = self.menu_bar.menu(1).unwrap().idx() {
+            match idx {
+                1 => self.current_buffer_mut().undo(),
+                2 => self.current_buffer_mut().redo(),
+                _ => { }
+            }
+        }
     }
 }

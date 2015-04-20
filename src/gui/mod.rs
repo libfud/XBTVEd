@@ -5,36 +5,31 @@ extern crate opengl_graphics;
 extern crate glutin_window;
 
 pub mod editor;
+pub mod menu;
 
 use std::path::Path;
 use std::thread;
 use std::sync::mpsc::channel;
 
 pub use self::editor::{EdBuffer, XBTVEd};
-use super::schedule::Schedule;
-use super::tags::Tags;
-use super::program::{Source, Program, Instruction};
+//use super::program::{Source, Program, Instruction};
 use super::action;
 
 use self::conrod::{
     Background,
     Button,
-    Callable,
-    Color,
     Colorable,
     Drawable,
-    DropDownList,
     Frameable,
     Label,
     Labelable,
-    Point,
     Positionable,
     Shapeable,
     TextBox,
     Theme,
     Ui
 };
-use self::conrod::color::{self, rgb, white, black};
+use self::conrod::color::rgb;
 use self::opengl_graphics::{GlGraphics, OpenGL};
 use self::opengl_graphics::glyph_cache::GlyphCache;
 use self::piston::event::*;
@@ -231,7 +226,7 @@ pub fn change_schedule_name() -> Option<String> {
 
 pub fn draw_gui() {
     let (window, mut gl, mut ui) = make_window("XBTVEd", 1000, 800);
-    let mut xbtved = XBTVEd::new();
+    let mut xbtved = XBTVEd::new(1000.0);
 
     for event in window.events().ups(180).max_fps(60) {
         ui.handle_event(&event);
@@ -240,60 +235,23 @@ pub fn draw_gui() {
                 draw_ui(gl, &mut ui, &mut xbtved);
             });
         }
+        if xbtved.exit() {
+            break
+        }
     }
 }
 
 pub fn draw_ui<'a>(gl: &mut GlGraphics, ui: &mut Ui<GlyphCache<'a>>, xbtved: &mut XBTVEd) {
     let bg_color = rgb(0.2, 0.21, 0.25);
     let button_color = rgb(0.23, 0.25, 0.29);
-    let menu_color = rgb(0.40, 0.44, 0.48);
     let label_color = rgb(0.85, 0.89, 0.95);
     
     Background::new().color(bg_color.clone()).draw(ui, gl);
 
     //The menubar
     //Starting with File
-//    let ref mut idx = None;
-    let mut file_entries = xbtved.file_entries_mut().clone();
-    let width = xbtved.file_entries_width();
-    DropDownList::new(0, &mut file_entries, &mut xbtved.file_selected_idx)
-        .dimensions(width, 20.0)
-        .position(5.0, 0.0)
-        .color(menu_color.clone())
-        .frame(1.0)
-        .label("File")
-        .label_color(label_color.clone())
-        .callback(|selected_idx: &mut Option<usize>, new_idx, _string| {
-            *selected_idx = Some(new_idx);
-        }).draw(ui, gl);
-
-    if let Some(idx) = xbtved.file_selected_idx {
-        match idx {
-            0 => { }, //File
-            1 => xbtved.add_buffer(), //New
-            5 => return,
-            x => println!("{}", x)
-        }
-        xbtved.file_selected_idx = None;
-    }
-
-    /*
-    //Edit
-    let ref mut edit_entries = vec!("Undo".to_string(), "Redo".to_string());
-    DropDownList::new(0, edit_entries, &mut None)
-        .dimensions(45.0, 20.0)
-        .position(50.0, 0.0)
-        .color(menu_color.clone())
-        .frame(1.0)
-        .label("Edit")
-        .label_color(label_color.clone())
-        .callback(|_idx: &mut Option<usize>, new_idx, _string| {
-            match new_idx {
-                0 => xbtved.current_buffer_mut().undo(),
-                _ => { }
-            }
-        }).draw(ui, gl);
-*/
+    xbtved.draw_menus(gl, ui);
+//    xbtved.handle_menus();
 
     let buf_len = xbtved.buffers_len().to_string();
     Label::new(&buf_len)

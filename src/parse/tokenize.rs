@@ -35,6 +35,10 @@ impl<T: Clone, U: Clone> TokenStream<T, U> {
         self.fwd_index
     }
 
+    pub fn rev_index(&self) -> usize {
+        self.rev_index
+    }
+
     pub fn on_exhaustion(&self) -> U {
         self.on_exhaustion.clone()
     }
@@ -103,4 +107,17 @@ fn analyze<T, U: Clone>(expr: &str, funs: &Vec<fn(&str) -> MaybeToken<T, U>>,
     }
 
     (Some(Err(on_exhaustion.clone())), 0)
+}
+
+impl<T: Clone, U: Clone> Clone for TokenStream<T, U> {
+    fn clone(&self) -> TokenStream<T, U> {
+        TokenStream {
+            expr: self.expr.clone(),
+            fwd_index: self.fwd_index.clone(),
+            rev_index: self.rev_index.clone(),
+            next_rules: self.next_rules.iter().map(|x| *x).collect::<Vec<fn(&str) -> MaybeToken<T, U>>>(),
+            back_rules: self.back_rules.iter().map(|x| *x).collect::<Vec<fn(&str) -> MaybeToken<T, U>>>(),
+            on_exhaustion: self.on_exhaustion.clone()
+        }
+    }
 }

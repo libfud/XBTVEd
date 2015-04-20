@@ -4,6 +4,7 @@ use super::ParseError::*;
 use super::{Token, Schedule, ParseError};
 use super::Token::*;
 use super::tokenize::TokenStream;
+use super::super::tags::TagType::{Cast, AudioTracks, Subtitles};
 use super::super::tags::Tags;
 use super::super::program::{Program, Source, Instruction};
 use super::super::program::Source::*;
@@ -27,42 +28,70 @@ pub fn strip<T>(t: Option<Result<T, ParseError>>) -> Result<T, ParseError> {
     }
 }
 
+pub fn create_list(tokens: &mut TokenStream<Token, ParseError>) -> Result<Vec<String>, ParseError> {
+    let mut list = Vec::new();
+    loop {
+        match try!(strip(tokens.next())) {
+            LParen => return Err(BadToken("Nested lists are not allowed".to_string())),
+            RParen => break,
+            List => return Err(BadToken("Nested lists are not allowed".to_string())),
+            Data(x) => list.push(x),
+            x => return Err(BadToken(format!("Expected tag data, found {}", x)))
+        }
+    }
+    Ok(list)
+}    
+
 pub fn get_location(tokens: &mut TokenStream<Token, ParseError>) -> Result<Source, ParseError> {
     try!(begin_expr(tokens));
-    let res = match try!(strip(tokens.next())) {
-        Local => match try!(strip(tokens.next())) {
-            Location(x) => Ok(Pathname(x)),
-            x => Err(BadToken(format!("Expected source for file, found {}", x)))
-        },
-        Network => match try!(strip(tokens.next())) {
-            Location(x) => Ok(Pathname(x)),
-            x => Err(BadToken(format!("Expected source for file, found {}", x)))
-        },
-        x => Err(BadToken(format!("Expected source for file, found {}", x)))
+    let loc_type = try!(strip(tokens.next()));
+    let loc_place = try!(strip(tokens.next()));
+    let res = match (loc_type, loc_place) {
+        (Local, Data(x)) => Ok(Pathname(x)),
+        (Network, Data(x)) => Ok(URL(x)),
+        (x, y) => return Err(BadToken(format!("Expected source for file, found {} {}", x, y)))
     };
     match try!(strip(tokens.next())) {
         RParen => res,
-        x => Err(BadToken(format!("{}{}", "In get_location, expected rparen, found ".to_string(), x)))
+        x => Err(BadToken(format!("In get_location, expected rparen, found {}", x)))
     }
 }
 
 pub fn get_tags(tokens: &mut TokenStream<Token, ParseError>) -> Result<Tags, ParseError> {
     try!(begin_expr(tokens));
-    if let Some(&Ok(Tag)) = tokens.peekable().peek() {
+    let mut tokens2 = tokens.clone();
+    if let Some(Ok(Tag)) = tokens2.next() {
         try!(strip(tokens.next()));
         let mut tags = Tags::new();
         loop {
-            match try!(strip(tokens.next())) {
-                TagData(ref x, ref y) => {
-                    try!(tags.modify_tag(x, y));
-                },
+            let tag_type = match try!(strip(tokens.next())) {
+                TagKind(x) => x,
                 RParen => break,
-                x => return Err(BadToken(format!("Expected rparen, found {}", x)))
+                x => return Err(BadToken(format!("Expected tag type or rparen, found {}", x)))
+            };
+
+            match tag_type {
+                Cast |
+                AudioTracks |
+                Subtitles => {
+                    try!(begin_expr(tokens));
+                    let list = match try!(strip(tokens.next())) {
+                        List => try!(create_list(tokens)),
+                        x => return Err(BadToken(format!("Expected a list for tag data, found {}", x)))
+                    };
+                    try!(tags.modify_multi(&list, tag_type));
+                },
+                single => {
+                    let tagdata = match try!(strip(tokens.next())) {
+                        Data(x) => x,
+                        x => return Err(BadToken(format!("Expected tag data, found {}", x)))
+                    };
+                    try!(tags.modify_tag(&single, &tagdata));
+                }
             }
         }
         Ok(tags)
     } else {
-        assert!(tokens.previous().is_some()); //don't care about that token.
         match try!(strip(tokens.previous())) {
             LParen => { },
             x => panic!("Expected lparen when reversing tokenstream, found {}", x)
@@ -111,15 +140,12 @@ pub fn add_instrs(tokens: &mut TokenStream<Token, ParseError>) -> Result<Vec<Ins
                         instructions.push(Instruction::SubProgram(try!(add_program(tokens))));
                     },
                     RParen => break,
-                    x => return Err(BadToken(format!("{}{} ", 
-                                         "Expected beginnning of instructions but found ".to_string(),
-                                         x.to_string())))
+                    x => return Err(BadToken(format!("Expected beginnning of instructions but found {}", x)))
                 }
             }
             Ok(instructions)
         },
-        x => Err(BadToken(format!("{}{} ", "Expected beginnning of instructions but found ".to_string(),
-                                  x.to_string())))
+        x => return Err(BadToken(format!("Expected beginnning of instructions but found {}", x)))
     }
 
 
@@ -133,7 +159,7 @@ pub fn add_program(tokens: &mut TokenStream<Token, ParseError>) -> Result<Progra
 
     match try!(strip(tokens.next())) {
         RParen => { },
-        x => return Err(BadToken(format!("{}{}", "Expected closing paren, but found ".to_string(), x)))
+        x => return Err(BadToken(format!("Expected closing paren, but found {}", x)))
     }
 
     let prog = Program::new(source, tags, instructions);
@@ -148,7 +174,7 @@ pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
     };
 
     let name = match try!(strip(tokens.next())) {
-        Location(x) => x,
+        Data(x) => x,
         x => return Err(BadToken(format!("{}{}", "Expected name but found ", x)))
     };
 
@@ -160,14 +186,10 @@ pub fn translate(tokens: &mut TokenStream<Token, ParseError>) -> SchedResult {
             },
             Some(Ok(RParen)) => match tokens.next() {
                 None => break,
-                Some(Ok(x)) => return Err(BadToken(format!("{}{}", 
-                                                       "Expected end of tokenstream but found ".to_string(),
-                                                       x.to_string()))),
+                Some(Ok(x)) => return Err(BadToken(format!("Expected end of tokenstream, but found {}", x))),
                 Some(Err(f)) => return Err(f)
             },
-            Some(Ok(x)) => return Err(BadToken(format!("{}{}", 
-                                                       "Expected (, ), or Program but found ".to_string(),
-                                                       x.to_string()))),
+            Some(Ok(x)) => return Err(BadToken(format!("Expected (, ), or Program but found {}", x))),
             Some(Err(f)) => return Err(f),
             None => return Err(UnbalancedParens)
         }

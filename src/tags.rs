@@ -7,7 +7,7 @@ use super::parse::ParseError;
 use super::parse::ParseError::*;
 pub use self::chrono::{/*DateTime, Local, UTC,*/ NaiveDate};
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum VideoType {
     Movie,
     LiveAction,
@@ -52,7 +52,7 @@ impl FromStr for VideoType {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum AudioType {
     Album,
     Song,
@@ -92,7 +92,7 @@ impl FromStr for AudioType {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum MediaType {
     Video(VideoType),
     Audio(AudioType),
@@ -129,7 +129,7 @@ impl fmt::Display for MediaType {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum TagType {
     Title,
     MediaType,
@@ -150,8 +150,6 @@ pub enum TagType {
 
     Year,
     Airdate,
-//    DTimeUTC,
-//    DTLocal,
 
     Comment,
     Summary,
@@ -493,6 +491,16 @@ impl Tags {
                 let subtitles: Vec<String> = tagdata.split(",").map(|x: &str| x.to_string()).collect();
                 self.subtitles = Some(subtitles);
             }
+        }
+        Ok(())
+    }
+
+    pub fn modify_multi(&mut self, tagdata: &Vec<String>, tagtype: TagType) -> Result<(), ParseError> {
+        match tagtype {
+            TagType::Cast => self.cast = Some(tagdata.clone()),
+            TagType::AudioTracks => self.audio_tracks = Some(tagdata.clone()),
+            TagType::Subtitles => self.subtitles = Some(tagdata.clone()),
+            _ => return Err(BadToken("Attempting to modify tags which do not take a vector of strings".to_string()))
         }
         Ok(())
     }
