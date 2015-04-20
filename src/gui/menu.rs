@@ -75,9 +75,7 @@ impl<'a> Menu {
         &mut self.file_selected_idx
     }
 
-    //formerly pub fn draw
     pub fn draw(&mut self, ui: &mut Ui<GlyphCache<'a>>, gl: &mut GlGraphics) {
-//    pub fn dlist<F>(&'a mut self) -> 
         let width = self.width;
         let height = self.height;
         let mut entries = self.entries_mut().clone();
